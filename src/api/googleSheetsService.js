@@ -28,7 +28,6 @@ const googleSheetsService = {
         fetchSheet('CRM'),
         fetchSheet('Empleados'),
         fetchSheet('Estado HR'),
-        fetchSheet('Agenda_Trabajo'),
         fetchSheet('Tareas') // Opcional si agregaste la pestaña
       ]);
 
