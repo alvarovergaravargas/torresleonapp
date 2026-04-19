@@ -1,94 +1,12 @@
 import { useState, useEffect, createContext, useContext, useMemo, useRef, useCallback } from "react";
 import { Users, FolderKanban, Receipt, ChevronLeft, ChevronRight, Bell, Search, TrendingUp, AlertTriangle, Clock, CheckCircle, XCircle, ArrowRight, Calendar, Building2, FileWarning, Phone, Mail, MapPin, CircleDollarSign, Menu, X, Info, Plus, Save, UserCircle, ShieldCheck, LogOut, MessageSquare, Hash, Banknote, FileText, Target, UserPlus, NotebookPen, Sun, Moon, Monitor, Tablet, Smartphone, User, Pencil, MessageCircle, Upload, FileSpreadsheet, ShieldAlert, GripVertical, ClipboardList, Flag } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import googleSheetsService from './api/googleSheetsService';
 
 const ThemeCtx = createContext();
 const useTh = () => useContext(ThemeCtx);
 
-const C = [
-  {id:"CLI-001",t:"B2B",n:"Inversiones y Promociones del Pacífico S.A.",r:"1556987-1-12345 DV 12",c:"Carlos Mendoza",p:"+507 6678-1234",e:"contabilidad@inverpacifico.com.pa",s:"Cliente Activo"},
-  {id:"CLI-002",t:"B2B",n:"Constructora Cimientos S.A.",r:"144589-1-9876 DV 45",c:"Ana González",p:"+507 223-4567",e:"pagos@cimientos.com.pa",s:"Cliente Activo"},
-  {id:"CLI-003",t:"B2C",n:"Roberto Sánchez",r:"8-765-4321",c:"Roberto Sánchez",p:"+507 6987-6543",e:"rsanchez_86@gmail.com",s:"Cliente Activo"},
-  {id:"CLI-004",t:"B2B",n:"Arquitectura Estructural S.A.",r:"233456-1-5555 DV 89",c:"Ing. Luis Martínez",p:"+507 6555-4433",e:"admin@arqestructural.com",s:"En Litigio/Moroso"},
-  {id:"CLI-005",t:"B2B",n:"Desarrollos Inmobiliarios Norte",r:"156788-1-2222 DV 01",c:"Elena Ríos",p:"+507 209-8877",e:"finanzas@desarrollosnorte.com",s:"Cliente Activo"},
-  {id:"CLI-006",t:"B2C",n:"María Fernanda López",r:"8-812-3456",c:"María Fernanda López",p:"+507 6777-1122",e:"mflopez@hotmail.com",s:"Cotizando"},
-  {id:"CLI-007",t:"B2B",n:"Grupo Constructor Alianza",r:"188990-1-3344 DV 34",c:"Pedro Ramírez",p:"+507 6112-9988",e:"pramirez@grupoalianza.com.pa",s:"Prospecto"},
-  {id:"CLI-008",t:"B2B",n:"Subcontratos Eléctricos S.A.",r:"255667-1-7766 DV 56",c:"Jorge Castillo",p:"+507 6443-2211",e:"jcastillo@selectricos.com",s:"Cliente Activo"},
-  {id:"CLI-009",t:"B2C",n:"Carmen Victoria Herrera",r:"4-234-5678",c:"Carmen Victoria Herrera",p:"+507 6332-1100",e:"carmen.herrera@yahoo.com",s:"Cliente Activo"},
-  {id:"CLI-010",t:"B2B",n:"Materiales y Acabados Premium",r:"199887-1-6655 DV 90",c:"Sofía Pineda",p:"+507 230-1122",e:"spineda@acabadospremium.com",s:"Cotizando"},
-  {id:"CLI-011",t:"B2B",n:"Proyectos Urbanísticos S.A.",r:"122334-1-8899 DV 21",c:"Miguel Torres",p:"+507 6889-4455",e:"facturacion@proyectosurbanos.com",s:"Cliente Activo"},
-  {id:"CLI-012",t:"B2C",n:"Juan Pérez",r:"8-901-2345",c:"Juan Pérez",p:"+507 6223-5566",e:"jperez_dev@gmail.com",s:"En Litigio/Moroso"},
-  {id:"CLI-013",t:"B2B",n:"Ingeniería Civil Avanzada",r:"177655-1-4433 DV 78",c:"Andrea Vargas",p:"+507 264-9988",e:"avargas@ingcivilavanzada.com",s:"Cliente Activo"},
-  {id:"CLI-019",t:"B2B",n:"Remodelaciones Interiores",r:"133221-1-6677 DV 89",c:"Fernando Ruiz",p:"+507 6776-5544",e:"fruiz@remodelaciones.com.pa",s:"En Litigio/Moroso"},
-  {id:"CLI-027",t:"B2B",n:"Pisos y Revestimientos S.A.",r:"188991-1-5544 DV 98",c:"Gabriel Rojas",p:"+507 236-8899",e:"grojas@pisosrevestimientos.com",s:"En Litigio/Moroso"},
-  {id:"CLI-034",t:"B2B",n:"Impermeabilizaciones S.A.",r:"144778-1-6655 DV 54",c:"Tomás Delgado",p:"+507 6991-3322",e:"tdelgado@impermeab.com",s:"En Litigio/Moroso"},
-  {id:"CLI-041",t:"B2B",n:"Asesoría Ambiental Obra",r:"122556-1-7733 DV 98",c:"Rodrigo Paz",p:"+507 232-1144",e:"rpaz@asesoriaambiental.com",s:"En Litigio/Moroso"},
-  {id:"CLI-048",t:"B2C",n:"Guillermo Acosta",r:"8-867-8901",c:"Guillermo Acosta",p:"+507 6449-4455",e:"gacosta@gmail.com",s:"En Litigio/Moroso"},
-  {id:"CLI-049",t:"B2B",n:"Topografía y Agrimensura",r:"133667-1-8899 DV 87",c:"Simón Bravo",p:"+507 6780-6677",e:"sbravo@topografia.com.pa",s:"Cliente Activo"},
-];
-const xC=c=>({id_cliente:c.id,tipo_cliente:c.t,razon_social_nombre:c.n,ruc_cedula:c.r,contacto_principal:c.c,telefono_whatsapp:c.p,email_facturacion:c.e,estado_relacion:c.s,prospectado_por:c.pp||"",seguimiento_por:c.sg||"",comentarios:c.cm||""});
 const TEAM=["Christopher","Linssi","José"];
-
-const P=[
-  {id:"PRJ-001",ci:"CLI-001",nm:"Construcción Torre Administrativa",pr:1250000,fi:"2026-01-15",eo:"Ejecución",pm:"Carlos Rivera"},
-  {id:"PRJ-002",ci:"CLI-003",nm:"Techado Residencial Costa del Este",pr:18500,fi:"2026-03-10",eo:"Ejecución",pm:"Sofía Méndez"},
-  {id:"PRJ-003",ci:"CLI-004",nm:"Refuerzo Estructural Galera",pr:45000,fi:"2025-11-22",eo:"Suspendido",pm:"Luis Gómez"},
-  {id:"PRJ-004",ci:"CLI-005",nm:"Urbanización Norte - Fase 1",pr:850000,fi:"2026-02-05",eo:"Ejecución",pm:"Carlos Rivera"},
-  {id:"PRJ-005",ci:"CLI-012",nm:"Remodelación Apto San Francisco",pr:25000,fi:"2026-04-01",eo:"Suspendido",pm:"Elena Castillo"},
-  {id:"PRJ-007",ci:"CLI-013",nm:"Techado Estructura Metálica",pr:65000,fi:"2026-02-15",eo:"Ejecución",pm:"Luis Gómez"},
-  {id:"PRJ-008",ci:"CLI-019",nm:"Remodelación Oficina Corporativa",pr:110000,fi:"2025-12-01",eo:"Suspendido",pm:"Sofía Méndez"},
-  {id:"PRJ-010",ci:"CLI-002",nm:"Cimentación Edificio Residencial",pr:420000,fi:"2025-10-15",eo:"Entregado",pm:"Carlos Rivera"},
-  {id:"PRJ-011",ci:"CLI-034",nm:"Impermeabilización Azotea",pr:8500,fi:"2026-03-02",eo:"Ejecución",pm:"Marcos Valdés"},
-  {id:"PRJ-012",ci:"CLI-041",nm:"Evaluación Mitigación Ambiental",pr:15000,fi:"2026-01-10",eo:"Suspendido",pm:"Sofía Méndez"},
-  {id:"PRJ-013",ci:"CLI-048",nm:"Demolición y Limpieza Lote",pr:22000,fi:"2026-04-05",eo:"Ejecución",pm:"Luis Gómez"},
-  {id:"PRJ-015",ci:"CLI-011",nm:"Proyecto Urbanístico Brisas",pr:1500000,fi:"2025-08-15",eo:"Ejecución",pm:"Carlos Rivera"},
-  {id:"PRJ-016",ci:"CLI-013",nm:"Puente Peatonal Conexión",pr:280000,fi:"2026-02-10",eo:"Ejecución",pm:"Marcos Valdés"},
-];
-const PJ0=P.map(p=>({id_proyecto:p.id,id_cliente:p.ci,nombre_proyecto:p.nm,presupuesto_aprobado:p.pr,fecha_inicio:p.fi,estado_obra:p.eo,project_manager:p.pm}));
-
-const FA=[
-  {id:"FAC-001",pi:"PRJ-001",h:"Anticipo 20% - Movilización",m:250000,fv:"2026-01-30",dm:0,ec:"Pagado"},
-  {id:"FAC-002",pi:"PRJ-001",h:"Avance Obra #1 (Fundaciones)",m:150000,fv:"2026-03-15",dm:0,ec:"Pagado"},
-  {id:"FAC-003",pi:"PRJ-001",h:"Avance Obra #2 (Estructura)",m:150000,fv:"2026-04-14",dm:0,ec:"Pendiente"},
-  {id:"FAC-007",pi:"PRJ-003",h:"Avance #1 - Revisión APU",m:15000,fv:"2026-01-05",dm:97,ec:"En Disputa Técnica"},
-  {id:"FAC-009",pi:"PRJ-004",h:"Avance Obra #1 (Mov. Tierra)",m:100000,fv:"2026-03-20",dm:23,ec:"Pago Parcial"},
-  {id:"FAC-010",pi:"PRJ-004",h:"Avance Obra #2 (Calles)",m:150000,fv:"2026-04-17",dm:0,ec:"Pendiente"},
-  {id:"FAC-011",pi:"PRJ-005",h:"Anticipo 40% - Remodelación",m:10000,fv:"2026-04-05",dm:7,ec:"Pendiente"},
-  {id:"FAC-015",pi:"PRJ-007",h:"Avance #1 - Montaje Vigas",m:20000,fv:"2026-03-30",dm:13,ec:"Pendiente"},
-  {id:"FAC-017",pi:"PRJ-008",h:"Avance #1 - Gypsum",m:25000,fv:"2026-01-25",dm:77,ec:"En Disputa Técnica"},
-  {id:"FAC-021",pi:"PRJ-010",h:"Liquidación Final",m:186000,fv:"2026-03-02",dm:41,ec:"Pendiente"},
-  {id:"FAC-022",pi:"PRJ-011",h:"Pago Único - Impermeab.",m:8500,fv:"2026-03-17",dm:26,ec:"Pago Parcial"},
-  {id:"FAC-023",pi:"PRJ-012",h:"Estudio Impacto Ambiental",m:15000,fv:"2026-01-25",dm:77,ec:"En Disputa Técnica"},
-  {id:"FAC-029",pi:"PRJ-015",h:"Avance #2 - Calles y Drenajes",m:350000,fv:"2026-02-25",dm:46,ec:"Pendiente"},
-];
-const FC=FA.map(f=>({id_factura:f.id,id_proyecto:f.pi,hitos_concepto:f.h,monto_facturado:f.m,fecha_vencimiento:f.fv,dias_mora:f.dm,estado_cobro:f.ec}));
-
-const CR0=[
-  {id:"INT-001",pi:"PRJ-003",ci:"",fc:"2026-01-10",tc:"Visita a Obra",n:"Discusión avance #1. Cliente retiene pago por revisión APU acero.",pp:""},
-  {id:"INT-005",pi:"PRJ-004",ci:"",fc:"2026-03-22",tc:"WhatsApp",n:"Recordatorio saldo pendiente Avance #1. Cliente confirma recepción.",pp:""},
-  {id:"INT-007",pi:"PRJ-004",ci:"",fc:"2026-04-02",tc:"Llamada",n:"Finanzas confirma saldo restante ($70k). Cheque gerencia sale viernes.",pp:"2026-04-10"},
-  {id:"INT-016",pi:"PRJ-011",ci:"",fc:"2026-03-10",tc:"Visita a Obra",n:"Entrega impermeabilización. Pago parcial, retienen % por garantía.",pp:""},
-  {id:"INT-024",pi:"PRJ-015",ci:"",fc:"2026-04-02",tc:"Llamada",n:"Reunión urgencia directiva. Transferencias fraccionadas en abril.",pp:"2026-04-15"},
-  {id:"INT-025",pi:"PRJ-001",ci:"",fc:"2026-04-05",tc:"WhatsApp",n:"Notificación emisión factura Avance Obra #2 + reporte fotográfico.",pp:""},
-  {id:"INT-030",pi:"PRJ-013",ci:"",fc:"2026-04-07",tc:"Email",n:"Factura reemitida con RUC correcto. Cliente acusa recibo.",pp:"2026-04-09"},
-  {id:"INT-031",pi:"",ci:"CLI-006",fc:"2026-04-08",tc:"Llamada",n:"Seguimiento cotización techado. María compara con otro proveedor.",pp:""},
-  {id:"INT-032",pi:"",ci:"CLI-007",fc:"2026-04-09",tc:"Email",n:"Envío brochure y portafolio. Prospecto interesado en urbanización.",pp:""},
-  {id:"INT-033",pi:"",ci:"CLI-010",fc:"2026-04-10",tc:"WhatsApp",n:"Seguimiento cotización acabados premium. Solicitan reunión presencial.",pp:""},
-];
-const xR=x=>({id_interaccion:x.id,id_proyecto:x.pi,id_cliente:x.ci,fecha_contacto:x.fc,tipo_contacto:x.tc,notas_acuerdos:x.n,promesa_pago:x.pp});
-
-const TASK0=[
-  {id_tarea:"TSK-001",fecha_creacion:"2026-04-01",obra:"PRJ-001",responsable:"Carlos Rivera",cargo_rol:"Project Manager",descripcion_tarea:"Revisar planos estructurales piso 12-15",prioridad:"Alta",estado:"Pendiente",fecha_compromiso:"2026-04-10",fecha_cierre:"",comentarios:"Urgente por avance de obra",creado_por:"Christopher",updated_at:"2026-04-01",status:"activo"},
-  {id_tarea:"TSK-002",fecha_creacion:"2026-04-02",obra:"PRJ-004",responsable:"Elena Ríos",cargo_rol:"Directora",descripcion_tarea:"Aprobar orden de compra de materiales Fase 2",prioridad:"Alta",estado:"En Proceso",fecha_compromiso:"2026-04-08",fecha_cierre:"",comentarios:"Pendiente firma del cliente",creado_por:"Linssi",updated_at:"2026-04-03",status:"activo"},
-  {id_tarea:"TSK-003",fecha_creacion:"2026-03-28",obra:"PRJ-003",responsable:"Luis Gómez",cargo_rol:"Ingeniero",descripcion_tarea:"Preparar informe APU para disputa técnica",prioridad:"Crítica",estado:"Atrasado",fecha_compromiso:"2026-04-05",fecha_cierre:"",comentarios:"Cliente exige respuesta esta semana",creado_por:"José",updated_at:"2026-04-06",status:"activo"},
-  {id_tarea:"TSK-004",fecha_creacion:"2026-04-03",obra:"PRJ-015",responsable:"Carlos Rivera",cargo_rol:"Project Manager",descripcion_tarea:"Coordinar entrega de drenajes con subcontratista",prioridad:"Media",estado:"En Proceso",fecha_compromiso:"2026-04-15",fecha_cierre:"",comentarios:"",creado_por:"Christopher",updated_at:"2026-04-03",status:"activo"},
-  {id_tarea:"TSK-005",fecha_creacion:"2026-03-20",obra:"PRJ-007",responsable:"Luis Gómez",cargo_rol:"Ingeniero",descripcion_tarea:"Inspección soldaduras estructura metálica",prioridad:"Alta",estado:"Terminado",fecha_compromiso:"2026-04-01",fecha_cierre:"2026-03-30",comentarios:"Aprobado sin observaciones",creado_por:"Linssi",updated_at:"2026-03-30",status:"activo"},
-  {id_tarea:"TSK-006",fecha_creacion:"2026-04-05",obra:"PRJ-001",responsable:"Sofía Méndez",cargo_rol:"Coordinadora",descripcion_tarea:"Enviar reporte fotográfico avance obra #2",prioridad:"Baja",estado:"Terminado",fecha_compromiso:"2026-04-07",fecha_cierre:"2026-04-06",comentarios:"Enviado por WhatsApp al cliente",creado_por:"Christopher",updated_at:"2026-04-06",status:"activo"},
-  {id_tarea:"TSK-007",fecha_creacion:"2026-04-07",obra:"PRJ-013",responsable:"Luis Gómez",cargo_rol:"Ingeniero",descripcion_tarea:"Verificar permisos de demolición municipal",prioridad:"Alta",estado:"Pendiente",fecha_compromiso:"2026-04-12",fecha_cierre:"",comentarios:"Municipio cerrado por feriado",creado_por:"José",updated_at:"2026-04-07",status:"activo"},
-  {id_tarea:"TSK-008",fecha_creacion:"2026-04-08",obra:"PRJ-004",responsable:"Marcos Valdés",cargo_rol:"Supervisor",descripcion_tarea:"Supervisar vaciado de concreto calles Fase 1",prioridad:"Crítica",estado:"En Proceso",fecha_compromiso:"2026-04-11",fecha_cierre:"",comentarios:"Concreto programado para viernes AM",creado_por:"Christopher",updated_at:"2026-04-09",status:"activo"},
-  {id_tarea:"TSK-009",fecha_creacion:"2026-03-15",obra:"PRJ-008",responsable:"Sofía Méndez",cargo_rol:"Coordinadora",descripcion_tarea:"Gestionar reclamo de calidad Gypsum con proveedor",prioridad:"Media",estado:"Atrasado",fecha_compromiso:"2026-03-25",fecha_cierre:"",comentarios:"Proveedor no responde",creado_por:"Linssi",updated_at:"2026-04-01",status:"activo"},
-  {id_tarea:"TSK-010",fecha_creacion:"2026-04-09",obra:"PRJ-016",responsable:"Marcos Valdés",cargo_rol:"Supervisor",descripcion_tarea:"Revisar cálculos cimentación puente peatonal",prioridad:"Media",estado:"Pendiente",fecha_compromiso:"2026-04-18",fecha_cierre:"",comentarios:"",creado_por:"José",updated_at:"2026-04-09",status:"activo"},
-];
 const KCOLS=[{id:"Pendiente",color:"#c4a265",bg:"bg-[#c4a265]/10"},{id:"En Proceso",color:"#3b82f6",bg:"bg-blue-500/10"},{id:"Terminado",color:"#22c55e",bg:"bg-emerald-500/10"},{id:"Atrasado",color:"#ef4444",bg:"bg-red-500/10"}];
 const PRIOS=["Baja","Media","Alta","Crítica"];
 const prioClr=p=>({"Baja":"bg-slate-500/15 text-slate-500","Media":"bg-sky-500/15 text-sky-600 dark:text-sky-400","Alta":"bg-amber-500/15 text-amber-600 dark:text-amber-400","Crítica":"bg-red-500/15 text-red-500"}[p]||"bg-slate-500/15 text-slate-500");
@@ -97,9 +15,9 @@ const RM={admin:{l:"Administrador",d:"Acceso completo"},crm:{l:"Gestión CRM",d:
 const $=n=>new Intl.NumberFormat("es-PA",{style:"currency",currency:"USD",minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
 const fd=d=>{if(!d)return"—";try{return new Date(d+"T12:00:00").toLocaleDateString("es-PA",{day:"2-digit",month:"short",year:"numeric"});}catch{return d;}};
 const bg=e=>({"Cliente Activo":"bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",Prospecto:"bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/20",Cotizando:"bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/20","En Litigio/Moroso":"bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/20",Ejecución:"bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",Suspendido:"bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/20",Entregado:"bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/20","En Planificación":"bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",Pagado:"bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",Pendiente:"bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20","En Disputa Técnica":"bg-orange-500/15 text-orange-600 dark:text-orange-300 border-orange-500/20","Pago Parcial":"bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/20"}[e]||"bg-slate-500/15 text-slate-500 border-slate-500/20")+" border";
-const compSt=(c,prjs,facs)=>{if(c.estado_relacion==="Prospecto"&&!prjs.some(p=>p.id_cliente===c.id_cliente))return"Prospecto";const cp=prjs.filter(p=>p.id_cliente===c.id_cliente);if(cp.some(p=>p.estado_obra==="Cotizando"))return"Cotizando";const ff=facs||FC;const hasMora=ff.some(f=>{const pr=cp.find(p=>p.id_proyecto===f.id_proyecto);return pr&&f.dias_mora>0&&f.estado_cobro!=="Pagado";});if(hasMora||c.estado_relacion==="En Litigio/Moroso")return"En Litigio/Moroso";if(cp.some(p=>["Ejecución","Entregado","En Planificación"].includes(p.estado_obra)))return"Cliente Activo";return c.estado_relacion;};
-const gC=(b,a,prjs)=>b.id_cliente?a.find(c=>c.id_cliente===b.id_cliente):b.id_proyecto?a.find(c=>c.id_cliente===(prjs||PJ0).find(p=>p.id_proyecto===b.id_proyecto)?.id_cliente):null;
-const gP=(b,prjs)=>b.id_proyecto?(prjs||PJ0).find(p=>p.id_proyecto===b.id_proyecto):null;
+const compSt=(c,prjs,facs)=>{if(c.estado_relacion==="Prospecto"&&!prjs.some(p=>p.id_cliente===c.id_cliente))return"Prospecto";const cp=prjs.filter(p=>p.id_cliente===c.id_cliente);if(cp.some(p=>p.estado_obra==="Cotizando"))return"Cotizando";const ff=facs||[];const hasMora=ff.some(f=>{const pr=cp.find(p=>p.id_proyecto===f.id_proyecto);return pr&&f.dias_mora>0&&f.estado_cobro!=="Pagado";});if(hasMora||c.estado_relacion==="En Litigio/Moroso")return"En Litigio/Moroso";if(cp.some(p=>["Ejecución","Entregado","En Planificación"].includes(p.estado_obra)))return"Cliente Activo";return c.estado_relacion;};
+const gC=(b,a,prjs)=>b.id_cliente?a.find(c=>c.id_cliente===b.id_cliente):b.id_proyecto?a.find(c=>c.id_cliente===(prjs||[]).find(p=>p.id_proyecto===b.id_proyecto)?.id_cliente):null;
+const gP=(b,prjs)=>b.id_proyecto?(prjs||[]).find(p=>p.id_proyecto===b.id_proyecto):null;
 const iM={Llamada:Phone,Email:Mail,"Visita a Obra":MapPin,WhatsApp:MessageSquare};
 
 function Toast({ts,rm}){return<div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">{ts.map(t=><div key={t.id} style={{animation:"sU .3s ease-out"}} className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm ${t.y==="success"?"bg-emerald-50 dark:bg-emerald-950/90 border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-200":"bg-red-50 dark:bg-red-950/90 border-red-300 dark:border-red-500/30 text-red-700 dark:text-red-200"}`}>{t.y==="success"?<CheckCircle size={16}/>:<XCircle size={16}/>}{t.m}<button onClick={()=>rm(t.id)} className="ml-2 opacity-60 hover:opacity-100"><X size={14}/></button></div>)}</div>;}
@@ -384,12 +302,46 @@ function TarV({tasks,setTasks,prjs,toast}){
 
 export default function App(){
   const[role,sR]=useState(null);const[col,sCol]=useState(false);const[mob,sMob]=useState(false);const[view,sV]=useState(null);const[sp,sSP]=useState(null);const[selC,sSelC]=useState(null);const[dark,sD]=useState(true);const[vm,sVm]=useState("desktop");const[ts,sTs]=useState([]);
-  const[cls,sCls]=useState(()=>C.map(xC));const[crm,sCrm]=useState(()=>CR0.map(xR));const[prjs,sPrjs]=useState(PJ0);const[facs,sFacs]=useState(FC);const[tasks,sTasks]=useState(TASK0);
+  
+  // 1. Estados inicializados vacíos y agregamos el estado de carga
+  const[cls,sCls]=useState([]);
+  const[crm,sCrm]=useState([]);
+  const[prjs,sPrjs]=useState([]);
+  const[facs,sFacs]=useState([]);
+  const[tasks,sTasks]=useState([]);
+  const[loading,setLoading]=useState(true);
+
   useEffect(()=>{const w=window.innerWidth;if(w<640)sVm("mobile");else if(w<1024)sVm("tablet");},[]);
   useEffect(()=>{if(!role)return;sV(role==="cobros"?"dash-cobros":"dash-crm");},[role]);
+
+  // 2. Disparamos la carga desde Google Sheets al abrir la app
+  useEffect(() => {
+    const fetchDatos = async () => {
+      try {
+        const data = await googleSheetsService.loadAll();
+        if (data) {
+          sCls(data.clientes || []);
+          sPrjs(data.proyectos || []);
+          sFacs(data.cuentas || []); 
+          sCrm(data.crm || []);
+          sTasks(data.tareas || []);
+        }
+      } catch (error) {
+        console.error("Fallo la carga inicial", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDatos();
+  }, []);
+
   const toast=(m,y="success")=>{const id=Date.now();sTs(p=>[...p,{id,m,y}]);setTimeout(()=>sTs(p=>p.filter(t=>t.id!==id)),4000);};
   const vw={mobile:"max-w-[430px]",tablet:"max-w-[820px]",desktop:"max-w-none"}[vm];
   const rv=()=>{switch(view){case"dash-crm":return<DashCRM cls={cls} crm={crm} prjs={prjs}/>;case"dash-cobros":return<DashCob cls={cls} prjs={prjs} facs={facs}/>;case"clientes":return<ClV cls={cls} setCls={sCls} toast={toast} crm={crm} setCrm={sCrm} prjs={prjs} setView={sV} setSelC={sSelC} facs={facs}/>;case"c360":return<C3V cid={selC} setView={sV} cls={cls} setCls={sCls} crm={crm} setCrm={sCrm} prjs={prjs} toast={toast} facs={facs}/>;case"proyectos":return<PrV cls={cls} setCls={sCls} setView={sV} setSP={sSP} prjs={prjs} setPrjs={sPrjs} toast={toast} facs={facs}/>;case"p360":return<P3V pid={sp} setView={sV} cls={cls} crm={crm} setCrm={sCrm} toast={toast} prjs={prjs} facs={facs}/>;case"cobros":return<CoV cls={cls} prjs={prjs} facs={facs} setFacs={sFacs} toast={toast}/>;case"tareas":return<TarV tasks={tasks} setTasks={sTasks} prjs={prjs} toast={toast}/>;case"bitacora":return<BiV crm={crm} setCrm={sCrm} cls={cls} toast={toast} prjs={prjs}/>;default:return<DashCRM cls={cls} crm={crm} prjs={prjs}/>;}};
+
+  // 3. Mostramos una pantalla de carga mientras Netlify se comunica con Google Sheets
+  if(loading) return <div className="min-h-screen flex items-center justify-center bg-[#f8f6f1] dark:bg-[#0b1120]"><div className="text-[#c4a265] font-bold text-lg animate-pulse flex flex-col items-center gap-3"><div className="w-10 h-10 border-4 border-[#c4a265] border-t-transparent rounded-full animate-spin"></div>Conectando con la Base de Datos...</div></div>;
+
   if(!role)return<ThemeCtx.Provider value={{dark,toggle:()=>sD(d=>!d)}}><div className={dark?"dark":""}><style>{CSS}</style><RoleSel setRole={sR}/></div></ThemeCtx.Provider>;
   return<ThemeCtx.Provider value={{dark,toggle:()=>sD(d=>!d)}}><div className={dark?"dark":""}><style>{CSS}</style><div className="min-h-screen bg-[#f5f3ee] dark:bg-[#0b1120] transition-colors duration-300"><Sidebar col={col} setCol={sCol} view={view} setView={sV} mob={mob} setMob={sMob} role={role}/><Topbar setMob={sMob} role={role} setRole={sR} vm={vm} setVm={sVm}/><main className={`pt-14 transition-all duration-300 ${col?"lg:pl-[68px]":"lg:pl-[230px]"}`}><div className={`mx-auto p-4 lg:p-6 transition-all duration-300 ${vw}`}>{rv()}</div></main><Toast ts={ts} rm={id=>sTs(p=>p.filter(t=>t.id!==id))}/></div></div></ThemeCtx.Provider>;
 }
