@@ -1,46 +1,48 @@
 const API_URL = '/.netlify/functions/sheets';
 
-// Función base para hacer las peticiones
-const fetchSheet = async (sheetName, method = 'GET', data = null) => {
-  // Asegurarse de codificar espacios en nombres como "Estado HR"
-  const url = `${API_URL}/${encodeURIComponent(sheetName)}`;
+const fetchSheet = async (sheetName, method = 'GET', data = null, id = null) => {
+  const baseUrl = `${API_URL}/${encodeURIComponent(sheetName)}`;
+  const url = id ? `${baseUrl}?id=${encodeURIComponent(id)}` : baseUrl;
+
   const options = {
     method,
     headers: { 'Content-Type': 'application/json' },
   };
+
   if (data) options.body = JSON.stringify(data);
 
   const response = await fetch(url, options);
-  if (!response.ok) throw new Error(`Error en ${sheetName}: ${response.statusText}`);
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Error en ${sheetName}: ${response.status} ${response.statusText} ${errorText}`);
+  }
   return response.json();
 };
 
-// Objeto con todos los métodos disponibles para tu aplicación
 const googleSheetsService = {
-  // Métodos GET (Leer todo)
   loadAll: async () => {
-    try {
-      // EXACTAMENTE 8 VARIABLES PARA 8 PESTAÑAS
-      const [clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, tareas] = await Promise.all([
-        fetchSheet('Clientes'),
-        fetchSheet('Proyectos'),
-        fetchSheet('Cuentas_por_cobrar'),
-        fetchSheet('Pagos'),
-        fetchSheet('CRM'),
-        fetchSheet('Empleados'),
-        fetchSheet('Estado HR'),
-        fetchSheet('Tareas') 
-      ]);
+    const results = await Promise.allSettled([
+      fetchSheet('Clientes'),
+      fetchSheet('Proyectos'),
+      fetchSheet('Cuentas_por_cobrar'),
+      fetchSheet('Pagos'),
+      fetchSheet('CRM'),
+      fetchSheet('Empleados'),
+      fetchSheet('Estado HR'),
+      fetchSheet('Tareas'),
+    ]);
 
-      return { clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, tareas };
-    } catch (error) {
-      console.error("Error cargando la base de datos:", error);
-      return null;
-    }
+    const [clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, tareas] = results.map((result, index) => {
+      if (result.status === 'fulfilled') return result.value;
+      console.error(`Error cargando hoja índice ${index}:`, result.reason);
+      return [];
+    });
+
+    return { clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, tareas };
   },
 
-  // Generadores dinámicos para Crear (POST) en cualquier tabla
   createRegistro: (sheetName, data) => fetchSheet(sheetName, 'POST', data),
+  updateRegistro: (sheetName, id, data) => fetchSheet(sheetName, 'PUT', data, id),
 };
 
 export default googleSheetsService;
