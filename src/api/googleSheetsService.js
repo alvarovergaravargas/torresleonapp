@@ -20,7 +20,8 @@ const googleSheetsService = {
   // Métodos GET (Leer todo)
   loadAll: async () => {
     try {
-      const [clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, agenda, tareas] = await Promise.all([
+      // EXACTAMENTE 8 VARIABLES PARA 8 PESTAÑAS
+      const [clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, tareas] = await Promise.all([
         fetchSheet('Clientes'),
         fetchSheet('Proyectos'),
         fetchSheet('Cuentas_por_cobrar'),
@@ -28,10 +29,10 @@ const googleSheetsService = {
         fetchSheet('CRM'),
         fetchSheet('Empleados'),
         fetchSheet('Estado HR'),
-        fetchSheet('Tareas') // Opcional si agregaste la pestaña
+        fetchSheet('Tareas') 
       ]);
 
-      return { clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, agenda, tareas };
+      return { clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, tareas };
     } catch (error) {
       console.error("Error cargando la base de datos:", error);
       return null;
