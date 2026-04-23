@@ -672,7 +672,7 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
   );
 }
 
-export default function App(){
+function App(){
   const[role,sR]=useState(null);const[col,sCol]=useState(false);const[mob,sMob]=useState(false);const[view,sV]=useState(null);const[sp,sSP]=useState(null);const[selC,sSelC]=useState(null);const[dark,sD]=useState(true);const[vm,sVm]=useState("desktop");const[ts,sTs]=useState([]);
   
   // 1. Estados inicializados vacíos y agregamos el estado de carga
