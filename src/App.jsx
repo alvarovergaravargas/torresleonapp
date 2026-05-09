@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, useMemo, useRef, useCallback } from "react";
-import { Users, FolderKanban, Receipt, ChevronLeft, ChevronRight, Bell, Search, TrendingUp, AlertTriangle, Clock, CheckCircle, XCircle, ArrowRight, Calendar, Building2, FileWarning, Phone, Mail, MapPin, CircleDollarSign, Menu, X, Info, Plus, Save, UserCircle, ShieldCheck, LogOut, MessageSquare, Hash, Banknote, FileText, Target, UserPlus, NotebookPen, Sun, Moon, Monitor, Tablet, Smartphone, User, Pencil, MessageCircle, Upload, FileSpreadsheet, ShieldAlert, GripVertical, ClipboardList, Flag, Lock, Eye, EyeOff } from "lucide-react";
+import { Users, FolderKanban, Receipt, ChevronLeft, ChevronRight, ChevronDown, Bell, Search, TrendingUp, AlertTriangle, Clock, CheckCircle, XCircle, ArrowRight, Calendar, Building2, FileWarning, Phone, Mail, MapPin, CircleDollarSign, Menu, X, Info, Plus, Save, UserCircle, ShieldCheck, LogOut, MessageSquare, Hash, Banknote, FileText, Target, UserPlus, NotebookPen, Sun, Moon, Monitor, Tablet, Smartphone, User, Pencil, MessageCircle, Upload, FileSpreadsheet, ShieldAlert, GripVertical, ClipboardList, Flag, Lock, Eye, EyeOff } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import googleSheetsService from './api/googleSheetsService';
 
@@ -498,6 +498,7 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
   const [touchDrag, sTd] = useState(null);
   const [typeFilter, sTypeFilter] = useState("Todos");
   const [sortOrder, sSortOrder] = useState("newest");
+  const [showDone, setShowDone] = useState(false);
 
   const normalizeEstado = (estado) => {
     const e = String(estado || "").trim().toLowerCase();
@@ -830,7 +831,37 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
     }
   };
 
-  const activeCount = visibleTasks.filter((t) => t.status === "activo").length;
+  const markDone = async (taskId) => {
+    try {
+      const now = new Date().toISOString().slice(0, 10);
+      const currentTask = safeTasks.find((t) => t.id_tarea === taskId);
+      if (!currentTask) return;
+      const updatedTask = { ...currentTask, estado: "Terminado", updated_at: now, fecha_cierre: now };
+      await googleSheetsService.updateRegistro("Tareas", updatedTask.id_tarea, updatedTask);
+      setTasks((p) => (Array.isArray(p) ? p : []).map((t) => t.id_tarea === taskId ? updatedTask : t));
+      toast("Tarea marcada como terminada");
+    } catch (error) {
+      console.error("Error completando tarea:", error);
+      toast("No se pudo completar la tarea", "error");
+    }
+  };
+
+  const reopenTask = async (taskId) => {
+    try {
+      const now = new Date().toISOString().slice(0, 10);
+      const currentTask = safeTasks.find((t) => t.id_tarea === taskId);
+      if (!currentTask) return;
+      const updatedTask = { ...currentTask, estado: "Pendiente", updated_at: now, fecha_cierre: "" };
+      await googleSheetsService.updateRegistro("Tareas", updatedTask.id_tarea, updatedTask);
+      setTasks((p) => (Array.isArray(p) ? p : []).map((t) => t.id_tarea === taskId ? updatedTask : t));
+      toast("Tarea reabierta");
+    } catch (error) {
+      console.error("Error reabriendo tarea:", error);
+      toast("No se pudo reabrir la tarea", "error");
+    }
+  };
+
+  const activeCount = visibleTasks.filter((t) => t.status === "activo" && t.estado !== "Terminado").length;
   const alertCount = visibleTasks.filter(isOlderThanFiveDays).length;
 
   const TaskLabelSelector = ({ value, onChange }) => (
@@ -932,8 +963,8 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {KCOLS.map((col) => {
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {KCOLS.filter((col) => col.id !== "Terminado").map((col) => {
           const items = visibleTasks.filter(
             (t) => t.estado === col.id && t.status === "activo"
           );
@@ -950,7 +981,7 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
                   <div className="w-3 h-3 rounded-full" style={{ background: col.color }} />
                   <h3 className="text-sm font-bold text-slate-800 dark:text-white">{col.id}</h3>
                 </div>
-                <span className="text-xs text-slate-500">{items.length}</span>
+                <span className="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2 py-0.5 rounded-full">{items.length}</span>
               </div>
 
               <div className="space-y-3">
@@ -959,6 +990,10 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
                   const isAlert = isOlderThanFiveDays(t);
                   const ageDays = daysSinceCreation(t);
                   const label = getTaskLabel(taskType);
+                  const fcDate = parseTaskDate(t.fecha_compromiso);
+                  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+                  const isOverdue = fcDate && fcDate < todayMidnight;
+                  const showBanner = isAlert || isOverdue;
 
                   return (
                     <div
@@ -967,20 +1002,20 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
                       onDragStart={(e) => onDragStart(e, t.id_tarea)}
                       onTouchStart={() => onTouchStart(t.id_tarea)}
                       className={`rounded-xl border bg-slate-50 dark:bg-slate-800/40 p-3 cursor-move transition-all ${
-                        isAlert
+                        showBanner
                           ? "border-red-400/60 dark:border-red-500/50 shadow-sm shadow-red-500/10"
-                          : "border-slate-200 dark:border-slate-700/30"
+                          : "border-slate-200 dark:border-slate-700/30 hover:border-slate-300 dark:hover:border-slate-600"
                       }`}
                     >
-                      {isAlert && (
+                      {showBanner && (
                         <div className="mb-2 flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-600 dark:text-red-400">
-                          <AlertTriangle size={12} />
-                          Alerta: creada hace {ageDays} días
+                          <AlertTriangle size={11} />
+                          {isOverdue ? "Fecha compromiso vencida" : `Sin avance · ${ageDays}d`}
                         </div>
                       )}
 
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="text-sm font-semibold text-slate-800 dark:text-white line-clamp-2">
                             {t.descripcion_tarea || "Sin descripción"}
                           </div>
@@ -989,30 +1024,49 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
                             {taskType}
                           </div>
                         </div>
-                        <button
-                          onClick={() => openEdit(t)}
-                          className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 shrink-0"
-                        >
-                          <Pencil size={13} />
-                        </button>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <button
+                            title="Marcar como terminada"
+                            onClick={() => markDone(t.id_tarea)}
+                            className="p-1.5 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-slate-300 hover:text-emerald-500 transition-colors"
+                          >
+                            <CheckCircle size={14} />
+                          </button>
+                          <button
+                            onClick={() => openEdit(t)}
+                            className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-[#c4a265] transition-colors"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="mt-2 text-[11px] text-slate-500 space-y-1">
-                        {requiresProject(taskType) && <div>Proyecto: {projectLabel(t.obra)}</div>}
-                        <div>Responsable: {t.responsable || "—"}</div>
-                        <div>Creación: {fd(t.fecha_creacion)} {ageDays ? `• ${ageDays} días` : ""}</div>
-                        <div>Compromiso: {fd(t.fecha_compromiso)}</div>
+                      <div className="mt-2 text-[11px] text-slate-500 space-y-0.5">
+                        {requiresProject(taskType) && (
+                          <div className="truncate">Proyecto: {projectLabel(t.obra)}</div>
+                        )}
+                        <div>Responsable: {t.responsable || "Sin asignar"}</div>
+                        <div className={isOverdue ? "text-red-500 font-semibold" : ""}>
+                          Compromiso: {fd(t.fecha_compromiso)}
+                        </div>
                       </div>
 
                       <div className="mt-3 flex items-center justify-between">
                         <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${prioClr(t.prioridad)}`}>
                           {t.prioridad || "Media"}
                         </span>
+                        {ageDays > 0 && <span className="text-[10px] text-slate-400">{ageDays}d</span>}
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {items.length === 0 && (
+                <div className="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700/20 py-8 text-center text-slate-300 dark:text-slate-600 text-xs">
+                  Sin tareas
+                </div>
+              )}
 
               {touchDrag && (
                 <div className="mt-3 lg:hidden">
@@ -1028,6 +1082,79 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
           );
         })}
       </div>
+
+      {/* ═══ TERMINADO — sección colapsable ═══ */}
+      {(() => {
+        const doneItems = visibleTasks.filter((t) => t.estado === "Terminado" && t.status === "activo");
+        return (
+          <div className="rounded-2xl border border-emerald-200/60 dark:border-emerald-700/20 overflow-hidden">
+            <button
+              onClick={() => setShowDone((p) => !p)}
+              className="w-full flex items-center justify-between px-5 py-3.5 bg-emerald-50/60 dark:bg-emerald-900/10 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Terminado</span>
+                {doneItems.length > 0 && (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    {doneItems.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-slate-400">
+                <span className="text-[11px]">{showDone ? "Ocultar" : "Ver terminadas"}</span>
+                <ChevronDown size={15} className={`transition-transform duration-200 ${showDone ? "rotate-180" : ""}`} />
+              </div>
+            </button>
+
+            {showDone && (
+              <div className="bg-white dark:bg-slate-900/20">
+                {doneItems.length === 0 ? (
+                  <div className="px-5 py-8 text-center">
+                    <CheckCircle size={28} className="mx-auto mb-2 text-emerald-400 opacity-40" />
+                    <p className="text-sm text-slate-400">Sin tareas terminadas</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 dark:divide-slate-700/20">
+                    {doneItems.map((t) => {
+                      const taskType = getTaskType(t);
+                      return (
+                        <div
+                          key={t.id_tarea}
+                          className="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors"
+                        >
+                          <CheckCircle size={15} className="mt-0.5 text-emerald-500 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-slate-500 dark:text-slate-400 line-through line-clamp-1">
+                              {t.descripcion_tarea || "Sin descripción"}
+                            </p>
+                            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                              <span className="text-[10px] text-slate-400">{t.responsable || "—"}</span>
+                              {t.fecha_cierre && (
+                                <span className="text-[10px] text-emerald-500">Cerrado: {fd(t.fecha_cierre)}</span>
+                              )}
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${typeBadge(taskType)}`}>
+                                {taskType}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => reopenTask(t.id_tarea)}
+                            title="Reabrir tarea"
+                            className="shrink-0 text-[10px] px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-[#c4a265] hover:border-[#c4a265]/40 transition-colors whitespace-nowrap"
+                          >
+                            Reabrir
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <Mod open={sf} close={() => sSf(false)} title="Nueva Tarea" w>
         <div className="space-y-5">
