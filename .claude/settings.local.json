@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"/c/Users/ahc_0/OneDrive/Documentos/Proyectos Torres Leon/Gestor Empresarial Digital/torresleonapp\" && find src -type d)",
+      "Read(//c/c/Users/ahc_0/OneDrive/Documentos/Proyectos Torres Leon/Gestor Empresarial Digital/torresleonapp/**)",
+      "Bash(cd \"/c/Users/ahc_0/OneDrive/Documentos/Proyectos Torres Leon/Gestor Empresarial Digital/torresleonapp\" && find . -name \"*.md\" -o -name \"README*\")",
+      "Read(//c/c/Users/ahc_0/OneDrive/Documentos/Proyectos Torres Leon/Gestor Empresarial Digital/**)"
+    ]
+  }
+}
