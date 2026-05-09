@@ -4,7 +4,15 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import googleSheetsService from './api/googleSheetsService';
 
 
-const TEAM=["Christopher","Linssi","José"];
+const TEAM=["Hanna Castillo","Álvaro Vergara","Ricardo Torres","Christopher Duarte","Linssi Torres"];
+const RESPONSABLES=[
+  {nombre:"Hanna Castillo",email:"hanni.1686@gmail.com"},
+  {nombre:"Álvaro Vergara",email:"aovv.26@gmail.com"},
+  {nombre:"Ricardo Torres",email:"ricardomanueltorresgonzalez4@gmail.com"},
+  {nombre:"Christopher Duarte",email:"procotorresleon@gmail.com"},
+  {nombre:"Linssi Torres",email:"torresleoninversiones@gmail.com"},
+];
+const WEBHOOK_TAREAS="https://hook.us1.make.com/2cxly0d9diq4nmdvmgsdcgi4ipdbvpfi";
 const PROJECT_TYPES=["Construcción","Remodelación","Techado","Impermeabilización","Demolición","Cimentación","Puentes","Urbanismo","Estructuras","Consultoría","Otro"];
 const KCOLS=[{id:"Pendiente",color:"#c4a265",bg:"bg-[#c4a265]/10"},{id:"En Proceso",color:"#3b82f6",bg:"bg-blue-500/10"},{id:"Terminado",color:"#22c55e",bg:"bg-emerald-500/10"},{id:"Atrasado",color:"#ef4444",bg:"bg-red-500/10"}];
 const PRIOS=["Baja","Media","Alta","Crítica"];
@@ -449,6 +457,35 @@ function C3V({cid,setView,cls,setCls,crm,setCrm,prjs,toast,facs}){
 
 /* ═══ KANBAN TAREAS ═══ */
 
+const fireTaskWebhook = async (task, prjs = []) => {
+  const resp = RESPONSABLES.find(r => r.nombre === task.responsable);
+  if (!resp) return;
+  const proyecto = prjs.find(p => String(p.id_proyecto) === String(task.obra));
+  const payload = {
+    email_destinatario: resp.email,
+    nombre_responsable: resp.nombre,
+    id_tarea: task.id_tarea,
+    descripcion_tarea: task.descripcion_tarea || "",
+    tipo_tarea: task.tipo_tarea || "",
+    prioridad: task.prioridad || "Media",
+    estado: task.estado || "Pendiente",
+    fecha_compromiso: task.fecha_compromiso || "",
+    fecha_creacion: task.fecha_creacion || "",
+    creado_por: task.creado_por || "",
+    comentarios: task.comentarios || "",
+    proyecto: proyecto?.nombre_proyecto || "",
+  };
+  try {
+    await fetch(WEBHOOK_TAREAS, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.error("Webhook tareas:", e);
+  }
+};
+
 function TarV({ tasks = [], setTasks, prjs = [], toast }) {
   const TASK_LABELS = [
     {
@@ -706,6 +743,7 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
       await googleSheetsService.createRegistro("Tareas", nueva);
       setTasks((p) => [nueva, ...(Array.isArray(p) ? p : [])]);
       toast("Tarea creada");
+      if (nueva.responsable) fireTaskWebhook(nueva, prjs);
       sFm(em);
       sSf(false);
     } catch (error) {
@@ -731,6 +769,8 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
 
     try {
       const now = new Date().toISOString().slice(0, 10);
+      const originalTask = safeTasks.find(t => t.id_tarea === ef.id_tarea);
+      const responsableCambio = ef.responsable && ef.responsable !== (originalTask?.responsable || "");
 
       const updatedTask = {
         ...ef,
@@ -751,6 +791,7 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
       );
 
       toast("Tarea actualizada");
+      if (responsableCambio) fireTaskWebhook(updatedTask, prjs);
       sEf(null);
     } catch (error) {
       console.error("Error actualizando tarea:", error);
@@ -1177,11 +1218,11 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
                 req
               />
             )}
-            <Inp l="Responsable" v={fm.responsable} ch={(v) => u("responsable", v)} />
+            <Inp l="Responsable" v={fm.responsable} ch={(v) => u("responsable", v)} opts={[{v:"",l:"— Sin asignar —"},...RESPONSABLES.map(r=>({v:r.nombre,l:r.nombre}))]} req/>
             <Inp l="Cargo / Rol" v={fm.cargo_rol} ch={(v) => u("cargo_rol", v)} />
             <Inp l="Prioridad" v={fm.prioridad} ch={(v) => u("prioridad", v)} opts={PRIOS} />
             <Inp l="Fecha compromiso" v={fm.fecha_compromiso} ch={(v) => u("fecha_compromiso", v)} type="date" />
-            <Inp l="Creado por" v={fm.creado_por} ch={(v) => u("creado_por", v)} opts={TEAM} />
+            <Inp l="Creado por" v={fm.creado_por} ch={(v) => u("creado_por", v)} opts={[{v:"",l:"— Seleccionar —"},...TEAM.map(n=>({v:n,l:n}))]} />
             <div className="sm:col-span-2">
               <Inp l="Descripción" v={fm.descripcion_tarea} ch={(v) => u("descripcion_tarea", v)} ta req />
             </div>
@@ -1224,7 +1265,7 @@ function TarV({ tasks = [], setTasks, prjs = [], toast }) {
                     req
                   />
                 )}
-                <Inp l="Responsable" v={ef.responsable || ""} ch={(v) => ue("responsable", v)} />
+                <Inp l="Responsable" v={ef.responsable || ""} ch={(v) => ue("responsable", v)} opts={[{v:"",l:"— Sin asignar —"},...RESPONSABLES.map(r=>({v:r.nombre,l:r.nombre}))]} req/>
                 <Inp l="Cargo / Rol" v={ef.cargo_rol || ""} ch={(v) => ue("cargo_rol", v)} />
                 <Inp l="Prioridad" v={ef.prioridad || "Media"} ch={(v) => ue("prioridad", v)} opts={PRIOS} />
                 <Inp l="Estado" v={ef.estado || "Pendiente"} ch={(v) => ue("estado", v)} opts={KCOLS.map((c) => c.id)} />
