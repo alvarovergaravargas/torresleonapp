@@ -6,7 +6,7 @@ import googleSheetsService from './api/googleSheetsService';
 
 const TEAM=["Hanna Castillo","Álvaro Vergara","Ricardo Torres","Christopher Duarte","Linssi Torres"];
 const RESPONSABLES=[
-  {nombre:"Hanna Castillo",email:"hanni.1686@gmail.com"},
+  {nombre:"Hanna Castillo",email:"hanni.1186@gmail.com"},
   {nombre:"Álvaro Vergara",email:"aovv.26@gmail.com"},
   {nombre:"Ricardo Torres",email:"ricardomanueltorresgonzalez4@gmail.com"},
   {nombre:"Christopher Duarte",email:"procotorresleon@gmail.com"},
