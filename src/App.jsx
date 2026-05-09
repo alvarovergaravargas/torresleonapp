@@ -171,7 +171,74 @@ function Sidebar({col,setCol,view,setView,mob,setMob,role}){const nav=useMemo(()
   return<><aside className={`hidden lg:flex flex-col fixed left-0 top-0 h-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-r border-slate-200 dark:border-slate-700/40 z-40 transition-all duration-300 ${col?"w-[68px]":"w-[230px]"}`}>{inner}</aside>{mob&&<div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={()=>setMob(false)}/>}<aside className={`lg:hidden fixed left-0 top-0 h-full w-[260px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700/40 z-50 transition-transform duration-300 ${mob?"translate-x-0":"-translate-x-full"}`}><button onClick={()=>setMob(false)} className="absolute top-4 right-4 text-slate-400"><X size={20}/></button>{inner}</aside></>;
 }
 
-function Topbar({setMob,role,setRole,vm,setVm}){const{dark,toggle}=useTh();return<header className="fixed top-0 right-0 left-0 z-30 h-14 flex items-center justify-between px-3 lg:px-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700/30"><div className="flex items-center gap-2"><button onClick={()=>setMob(true)} className="lg:hidden p-2 -ml-1 text-slate-400"><Menu size={20}/></button><div className="hidden md:flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-700/30 w-[200px]"><Search size={14} className="text-slate-400"/><input className="bg-transparent text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 outline-none w-full" placeholder="Buscar..."/></div></div><div className="flex items-center gap-1"><div className="hidden sm:flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800/60 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700/30">{[[" mobile",Smartphone],["tablet",Tablet],["desktop",Monitor]].map(([id,I])=><button key={id} onClick={()=>setVm(id.trim())} className={`p-1.5 rounded-md transition-all ${vm===id.trim()?"bg-white dark:bg-slate-700 shadow-sm text-[#c4a265]":"text-slate-400"}`}><I size={14}/></button>)}</div><button onClick={toggle} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-400">{dark?<Sun size={16}/>:<Moon size={16}/>}</button><button className="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-400"><Bell size={16}/><span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center">5</span></button><div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-700/40"><div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#c4a265] to-[#8b6f3a] flex items-center justify-center text-xs font-bold text-white">{RM[role].avatar}</div><div className="hidden md:block"><div className="text-xs font-semibold text-slate-700 dark:text-slate-200">{RM[role].user}</div><div className="text-[10px] text-slate-400">{RM[role].l}</div></div></div><button onClick={()=>setRole(null)} title="Cerrar sesión" className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-400"><LogOut size={15}/></button></div></header>;}
+function NotifPanel({notifs,setView,close}){
+  const tipoIcon={critico:AlertTriangle,alerta:Clock};
+  const tipoStyle={critico:"bg-red-500/10 text-red-500",alerta:"bg-amber-500/10 text-amber-500"};
+  const catMeta={tareas:{l:"Tareas",I:ClipboardList},cobros:{l:"Cobros",I:Banknote},crm:{l:"CRM",I:Users}};
+  const cats=["cobros","tareas","crm"];
+  const critCount=notifs.filter(n=>n.tipo==="critico").length;
+  return(
+    <div className="absolute top-full right-0 mt-2 w-[320px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/50 shadow-2xl z-[90] overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700/40">
+        <div className="flex items-center gap-2">
+          <Bell size={14} className="text-slate-500"/>
+          <span className="text-sm font-bold text-slate-800 dark:text-white">Alertas</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {critCount>0&&<span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20">{critCount} crítica{critCount!==1?"s":""}</span>}
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">{notifs.length} total</span>
+        </div>
+      </div>
+      <div className="max-h-[440px] overflow-y-auto">
+        {notifs.length===0?(
+          <div className="py-12 text-center">
+            <CheckCircle size={32} className="mx-auto mb-2 text-emerald-400 opacity-60"/>
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Todo en orden</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Sin alertas pendientes</p>
+          </div>
+        ):(
+          cats.map(cat=>{
+            const items=notifs.filter(n=>n.cat===cat);
+            if(!items.length)return null;
+            const{l,I}=catMeta[cat];
+            return(
+              <div key={cat}>
+                <div className="px-4 py-2 flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/20 sticky top-0">
+                  <I size={11} className="text-slate-400"/>
+                  <span className="text-[10px] font-bold tracking-wider uppercase text-slate-400 flex-1">{l}</span>
+                  <span className="text-[10px] font-bold text-slate-400">{items.length}</span>
+                </div>
+                {items.map(n=>{
+                  const TI=tipoIcon[n.tipo]||Info;
+                  return(
+                    <button key={n.id} onClick={()=>{setView(n.nav);close();}}
+                      className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 border-b border-slate-100 dark:border-slate-700/15 text-left transition-colors group">
+                      <div className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${tipoStyle[n.tipo]||"bg-slate-500/10 text-slate-400"}`}>
+                        <TI size={13}/>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 group-hover:text-[#c4a265] transition-colors">{n.titulo}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{n.det}</p>
+                      </div>
+                      <ArrowRight size={12} className="mt-1.5 shrink-0 text-slate-300 group-hover:text-[#c4a265] transition-colors"/>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })
+        )}
+      </div>
+      {notifs.length>0&&(
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700/40 bg-slate-50 dark:bg-slate-800/30">
+          <p className="text-[10px] text-slate-400 text-center">Haz clic en una alerta para ir a la sección</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Topbar({setMob,role,setRole,vm,setVm,notifs,setView}){const{dark,toggle}=useTh();const[panel,sPanel]=useState(false);const npRef=useRef(null);useEffect(()=>{const h=e=>{if(npRef.current&&!npRef.current.contains(e.target))sPanel(false);};document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);return<header className="fixed top-0 right-0 left-0 z-30 h-14 flex items-center justify-between px-3 lg:px-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700/30"><div className="flex items-center gap-2"><button onClick={()=>setMob(true)} className="lg:hidden p-2 -ml-1 text-slate-400"><Menu size={20}/></button><div className="hidden md:flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-700/30 w-[200px]"><Search size={14} className="text-slate-400"/><input className="bg-transparent text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 outline-none w-full" placeholder="Buscar..."/></div></div><div className="flex items-center gap-1"><div className="hidden sm:flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800/60 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700/30">{[[" mobile",Smartphone],["tablet",Tablet],["desktop",Monitor]].map(([id,I])=><button key={id} onClick={()=>setVm(id.trim())} className={`p-1.5 rounded-md transition-all ${vm===id.trim()?"bg-white dark:bg-slate-700 shadow-sm text-[#c4a265]":"text-slate-400"}`}><I size={14}/></button>)}</div><button onClick={toggle} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-400">{dark?<Sun size={16}/>:<Moon size={16}/>}</button><div className="relative" ref={npRef}><button onClick={()=>sPanel(p=>!p)} className={`relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors ${panel?"bg-slate-100 dark:bg-slate-800/60 text-[#c4a265]":"text-slate-400"}`}><Bell size={16}/>{notifs.length>0&&<span className={`absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full ${notifs.some(n=>n.tipo==="critico")?"bg-red-500":"bg-amber-400"} text-[9px] font-bold text-white flex items-center justify-center`}>{Math.min(notifs.length,99)}</span>}</button>{panel&&<NotifPanel notifs={notifs} setView={setView} close={()=>sPanel(false)}/>}</div><div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-700/40"><div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#c4a265] to-[#8b6f3a] flex items-center justify-center text-xs font-bold text-white">{RM[role].avatar}</div><div className="hidden md:block"><div className="text-xs font-semibold text-slate-700 dark:text-slate-200">{RM[role].user}</div><div className="text-[10px] text-slate-400">{RM[role].l}</div></div></div><button onClick={()=>setRole(null)} title="Cerrar sesión" className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-400"><LogOut size={15}/></button></div></header>;}
 
 const ttS={background:"var(--tt-bg)",border:"1px solid var(--tt-border)",borderRadius:12,fontSize:12,color:"var(--tt-text)"};
 
@@ -1096,13 +1163,48 @@ function App(){
 
   const toast=(m,y="success")=>{const id=Date.now();sTs(p=>[...p,{id,m,y}]);setTimeout(()=>sTs(p=>p.filter(t=>t.id!==id)),4000);};
   const vw={mobile:"max-w-[430px]",tablet:"max-w-[820px]",desktop:"max-w-none"}[vm];
+  const notifs=useMemo(()=>{
+    const today=new Date();today.setHours(0,0,0,0);
+    const normEst=e=>{const s=String(e||"").trim().toLowerCase();if(s==="atrasado")return"Atrasado";if(s==="terminado"||s==="completada")return"Terminado";if(s==="en proceso")return"En Proceso";return"Pendiente";};
+    const normSt=s=>String(s||"").trim().toLowerCase()==="activo"?"activo":"otro";
+    const parseDt=v=>{if(!v)return null;const s=String(v).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return new Date(`${s}T12:00:00`);if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){const[mm,dd,yyyy]=s.split("/");return new Date(`${yyyy}-${mm}-${dd}T12:00:00`);}const p=new Date(v);return isNaN(p)?null:p;};
+    const list=[];
+    (tasks||[]).filter(t=>normSt(t.status)==="activo").forEach(t=>{
+      const est=normEst(t.estado);
+      if(est==="Terminado")return;
+      const desc=String(t.descripcion_tarea||t.id_tarea||"").slice(0,80);
+      if(est==="Atrasado"){list.push({id:`t-atr-${t.id_tarea}`,tipo:"critico",cat:"tareas",titulo:"Tarea atrasada",det:desc,nav:"tareas"});return;}
+      const fc=parseDt(t.fecha_compromiso);
+      if(fc&&fc<today){list.push({id:`t-fc-${t.id_tarea}`,tipo:"critico",cat:"tareas",titulo:"Fecha compromiso vencida",det:desc,nav:"tareas"});return;}
+      const cr=parseDt(t.fecha_creacion);
+      if(cr){const days=Math.floor((today-cr)/86400000);if(days>5)list.push({id:`t-old-${t.id_tarea}`,tipo:"alerta",cat:"tareas",titulo:`Sin avance · ${days}d en ${est}`,det:desc,nav:"tareas"});}
+    });
+    (facs||[]).filter(f=>f.estado_cobro!=="Pagado").forEach(f=>{
+      const mora=Number(f.dias_mora||0);
+      const det=`${String(f.hitos_concepto||f.id_factura||"").slice(0,40)} · ${$(f.monto_facturado)}`;
+      if(f.estado_cobro==="En Disputa Técnica")list.push({id:`f-disp-${f.id_factura}`,tipo:"alerta",cat:"cobros",titulo:"Factura en disputa técnica",det,nav:"cobros"});
+      else if(mora>30)list.push({id:`f-crit-${f.id_factura}`,tipo:"critico",cat:"cobros",titulo:`Mora crítica: ${mora} días`,det,nav:"cobros"});
+      else if(mora>0)list.push({id:`f-mora-${f.id_factura}`,tipo:"alerta",cat:"cobros",titulo:`${mora} días en mora`,det,nav:"cobros"});
+    });
+    (crm||[]).filter(b=>b.promesa_pago).forEach(b=>{
+      const pp=parseDt(b.promesa_pago);
+      if(pp&&pp<today){const cli=gC(b,cls,prjs);list.push({id:`crm-pp-${b.id_interaccion}`,tipo:"alerta",cat:"crm",titulo:"Promesa de pago vencida",det:`${cli?.razon_social_nombre||b.id_proyecto||"—"} · ${fd(b.promesa_pago)}`,nav:"bitacora"});}
+    });
+    (cls||[]).filter(c=>c.estado_relacion==="En Litigio/Moroso").forEach(c=>{
+      const last=(crm||[]).filter(b=>b.id_cliente===c.id_cliente).sort((a,b)=>b.fecha_contacto.localeCompare(a.fecha_contacto))[0];
+      const days=last?Math.floor((today-new Date(last.fecha_contacto))/86400000):9999;
+      if(days>30)list.push({id:`crm-liti-${c.id_cliente}`,tipo:"critico",cat:"crm",titulo:"Moroso sin contacto",det:`${c.razon_social_nombre} · ${days>=9999?"sin registro":days+"d sin contacto"}`,nav:"clientes"});
+    });
+    return list.sort((a,b)=>a.tipo==="critico"&&b.tipo!=="critico"?-1:1);
+  },[tasks,facs,crm,cls,prjs]);
+
   const rv=()=>{switch(view){case"dash-crm":return<DashCRM cls={cls} crm={crm} prjs={prjs}/>;case"dash-cobros":return<DashCob cls={cls} prjs={prjs} facs={facs}/>;case"clientes":return<ClV cls={cls} setCls={sCls} toast={toast} crm={crm} setCrm={sCrm} prjs={prjs} setView={sV} setSelC={sSelC} facs={facs}/>;case"c360":return<C3V cid={selC} setView={sV} cls={cls} setCls={sCls} crm={crm} setCrm={sCrm} prjs={prjs} toast={toast} facs={facs}/>;case"proyectos":return<PrV cls={cls} setCls={sCls} setView={sV} setSP={sSP} prjs={prjs} setPrjs={sPrjs} toast={toast} facs={facs}/>;case"p360":return<P3V pid={sp} setView={sV} cls={cls} crm={crm} setCrm={sCrm} toast={toast} prjs={prjs} facs={facs}/>;case"cobros":return<CoV cls={cls} prjs={prjs} facs={facs} setFacs={sFacs} toast={toast}/>;case"tareas":return<TarV tasks={tasks} setTasks={sTasks} prjs={prjs} toast={toast}/>;case"bitacora":return<BiV crm={crm} setCrm={sCrm} cls={cls} toast={toast} prjs={prjs}/>;default:return<DashCRM cls={cls} crm={crm} prjs={prjs}/>;}};
 
   // 3. Mostramos una pantalla de carga mientras Netlify se comunica con Google Sheets
   if(loading) return <div className="min-h-screen flex items-center justify-center bg-[#f8f6f1] dark:bg-[#0b1120]"><div className="text-[#c4a265] font-bold text-lg animate-pulse flex flex-col items-center gap-3"><div className="w-10 h-10 border-4 border-[#c4a265] border-t-transparent rounded-full animate-spin"></div>Conectando con la Base de Datos...</div></div>;
 
   if(!role)return<ThemeCtx.Provider value={{dark,toggle:()=>sD(d=>!d)}}><div className={dark?"dark":""}><style>{CSS}</style><RoleSel setRole={sR}/></div></ThemeCtx.Provider>;
-  return<ThemeCtx.Provider value={{dark,toggle:()=>sD(d=>!d)}}><div className={dark?"dark":""}><style>{CSS}</style><div className="min-h-screen bg-[#f5f3ee] dark:bg-[#0b1120] transition-colors duration-300"><Sidebar col={col} setCol={sCol} view={view} setView={sV} mob={mob} setMob={sMob} role={role}/><Topbar setMob={sMob} role={role} setRole={sR} vm={vm} setVm={sVm}/><main className={`pt-14 transition-all duration-300 ${col?"lg:pl-[68px]":"lg:pl-[230px]"}`}><div className={`mx-auto p-4 lg:p-6 transition-all duration-300 ${vw}`}>{rv()}</div></main><Toast ts={ts} rm={id=>sTs(p=>p.filter(t=>t.id!==id))}/></div></div></ThemeCtx.Provider>;
+  return<ThemeCtx.Provider value={{dark,toggle:()=>sD(d=>!d)}}><div className={dark?"dark":""}><style>{CSS}</style><div className="min-h-screen bg-[#f5f3ee] dark:bg-[#0b1120] transition-colors duration-300"><Sidebar col={col} setCol={sCol} view={view} setView={sV} mob={mob} setMob={sMob} role={role}/><Topbar setMob={sMob} role={role} setRole={sR} vm={vm} setVm={sVm} notifs={notifs} setView={sV}/><main className={`pt-14 transition-all duration-300 ${col?"lg:pl-[68px]":"lg:pl-[230px]"}`}><div className={`mx-auto p-4 lg:p-6 transition-all duration-300 ${vw}`}>{rv()}</div></main><Toast ts={ts} rm={id=>sTs(p=>p.filter(t=>t.id!==id))}/></div></div></ThemeCtx.Provider>;
 }
 
 const CSS=`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');*{font-family:'DM Sans',system-ui,sans-serif;box-sizing:border-box}body{margin:0;-webkit-font-smoothing:antialiased}:root{--tt-bg:#fff;--tt-border:#e2e8f0;--tt-text:#334155;--grid:#e2e8f0;--ax:#64748b}.dark{--tt-bg:#1e293b;--tt-border:#334155;--tt-text:#e2e8f0;--grid:#1e293b;--ax:#64748b}.cd{border-radius:1rem;border:1px solid #e2e8f0;background:#fff}.dark .cd{border-color:rgba(51,65,85,.4);background:rgba(30,41,59,.3)}@keyframes sU{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}.line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}.dark ::-webkit-scrollbar-thumb{background:#334155;border-radius:10px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px}`;
