@@ -278,7 +278,7 @@ function DashCob({cls,prjs,facs,onRefresh,refreshing}){
       <div className="lg:col-span-3 cd p-5"><h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Facturas con Mora</h3><div className="space-y-2">{ur.slice(0,5).map(f=>{const pr=prjs.find(p=>p.id_proyecto===f.id_proyecto);const cl=pr?cls.find(c=>c.id_cliente===pr.id_cliente):null;return<div key={f.id_factura} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/20"><div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${f.dias_mora>60?"bg-red-500/15":"bg-amber-500/15"}`}><Clock size={16} className={f.dias_mora>60?"text-red-500":"text-amber-500"}/></div><div className="flex-1 min-w-0"><div className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">{f.id_factura} — {cl?.razon_social_nombre||"—"}</div><div className="text-[11px] text-slate-500 truncate">{f.hitos_concepto}</div></div><div className="text-right shrink-0"><div className="text-sm font-bold text-slate-900 dark:text-white">{$(f.monto_facturado)}</div><div className={`text-[10px] font-semibold ${f.dias_mora>60?"text-red-500":"text-amber-500"}`}>{f.dias_mora}d</div></div></div>;})}</div></div></div></div>;}
 
 function ClV({cls,setCls,toast,crm,setCrm,prjs,setView,setSelC,facs,onRefresh,refreshing}){const[se,sSe]=useState("");const[fe,sFe]=useState("Todos");const[sf,sSf]=useState(false);const[ec,sEc]=useState(null);const[sb,sSb]=useState(null);const[pendingDel,sPendingDel]=useState(null);
-  const clsC=cls.map(c=>({...c,_st:compSt(c,prjs)}));
+  const clsC=cls.filter(c=>String(c.status||"").trim().toLowerCase()!=="eliminado").map(c=>({...c,_st:compSt(c,prjs)}));
   // New client form
   const em={tipo_cliente:"B2B",razon_social_nombre:"",ruc_cedula:"",contacto_principal:"",telefono_whatsapp:"+507 ",email_facturacion:"",estado_relacion:"Prospecto",prospectado_por:"",seguimiento_por:"",comentarios:""};const[fm,sFm]=useState(em);const u=(k,v)=>sFm(p=>({...p,[k]:v}));
   const sv=async()=>{if(!fm.comentarios?.trim()){toast("Los comentarios son obligatorios","error");return;}try{const newId=`CLI-${String(cls.length+1).padStart(3,"0")}`;const payload={...fm,id_cliente:newId,razon_social_nombre:fm.razon_social_nombre.trim()||"Prospecto "+newId};await googleSheetsService.createRegistro("Clientes",payload);setCls(p=>[...p,payload]);toast("Cliente creado");sFm(em);sSf(false);}catch(error){console.error("Error creando cliente:",error);toast("No se pudo guardar el cliente","error");}};
@@ -316,7 +316,7 @@ function ClV({cls,setCls,toast,crm,setCrm,prjs,setView,setSelC,facs,onRefresh,re
 
 function PrV({cls,setCls,setView,setSP,prjs,setPrjs,toast,facs,onRefresh,refreshing}){const[se,sSe]=useState("");const[fe,sFe]=useState("Todos");const[sf,sSf]=useState(false);const[nc,sNc]=useState(false);const[pendingDel,sPendingDel]=useState(null);
   const estados=["Todos","Cotizando","Ejecución","En Planificación","Suspendido","Entregado"];
-  const fl=prjs.filter(p=>p.nombre_proyecto.toLowerCase().includes(se.toLowerCase())&&(fe==="Todos"||p.estado_obra===fe));
+  const fl=prjs.filter(p=>String(p.status||"").trim().toLowerCase()!=="eliminado"&&p.nombre_proyecto.toLowerCase().includes(se.toLowerCase())&&(fe==="Todos"||p.estado_obra===fe));
   const emP={clientMode:"existing",id_cliente:"",nombre_proyecto:"",tipos_proyecto:"Construcción",presupuesto_aprobado:"",fecha_inicio:new Date().toISOString().slice(0,10),project_manager:""};
   const emC={tipo_cliente:"B2B",razon_social_nombre:"",ruc_cedula:"",contacto_principal:"",telefono_whatsapp:"+507 ",email_facturacion:"",prospectado_por:"",seguimiento_por:"",comentarios:""};
   const[pf,sPf]=useState(emP);const[cf,sCf]=useState(emC);const up=(k,v)=>sPf(p=>({...p,[k]:v}));const uc=(k,v)=>sCf(p=>({...p,[k]:v}));
@@ -424,7 +424,7 @@ function CoV({cls,prjs,facs,setFacs,toast,onRefresh,refreshing}){const[fl,sFl]=u
 function BiV({crm,setCrm,cls,toast,prjs,onRefresh,refreshing}){const[sf,sSf]=useState(false);const[ft,sFt]=useState("Todos");const[se,sSe]=useState("");const[pendingDel,sPendingDel]=useState(null);const em={lt:"proyecto",pi:prjs[0]?.id_proyecto||"",ci:"",fc:new Date().toISOString().slice(0,10),tc:"Llamada",n:"",pp:""};const[fm,sFm]=useState(em);const u=(k,v)=>sFm(p=>({...p,[k]:v}));
   const sv=async()=>{if(!fm.n){toast("Agrega una nota","error");return;}const nueva={id_interaccion:`INT-${String(crm.length+1).padStart(3,"0")}`,id_proyecto:fm.lt==="proyecto"?fm.pi:"",id_cliente:fm.lt==="cliente"?fm.ci:"",fecha_contacto:fm.fc,tipo_contacto:fm.tc,notas_acuerdos:fm.n,promesa_pago:fm.pp};try{await googleSheetsService.createRegistro("CRM",nueva);setCrm(p=>[nueva,...p]);toast("Interacción registrada");sFm(em);sSf(false);}catch(error){console.error("Error registrando interacción:",error);toast("No se pudo guardar la interacción","error");}};
   const softDeleteCRM=async()=>{if(!pendingDel)return;try{const now=new Date().toISOString().slice(0,10);const b=crm.find(x=>x.id_interaccion===pendingDel);if(!b){sPendingDel(null);return;}await googleSheetsService.updateRegistro("CRM",pendingDel,{...b,status:"eliminado",deleted_at:now,updated_at:now});setCrm(p=>p.filter(x=>x.id_interaccion!==pendingDel));toast("Interacción eliminada");}catch(error){console.error("Error eliminando interacción:",error);toast("No se pudo eliminar la interacción","error");}finally{sPendingDel(null);}};
-  const so=[...crm].sort((a,b)=>b.fecha_contacto.localeCompare(a.fecha_contacto));const fiBase=ft==="Todos"?so:ft==="Proyectos"?so.filter(b=>b.id_proyecto):so.filter(b=>b.id_cliente&&!b.id_proyecto);const fi=se.trim()?fiBase.filter(b=>String(b.notas_acuerdos||"").toLowerCase().includes(se.toLowerCase())||String(b.tipo_contacto||"").toLowerCase().includes(se.toLowerCase())):fiBase;
+  const so=[...crm].filter(b=>String(b.status||"").trim().toLowerCase()!=="eliminado").sort((a,b)=>b.fecha_contacto.localeCompare(a.fecha_contacto));const fiBase=ft==="Todos"?so:ft==="Proyectos"?so.filter(b=>b.id_proyecto):so.filter(b=>b.id_cliente&&!b.id_proyecto);const fi=se.trim()?fiBase.filter(b=>String(b.notas_acuerdos||"").toLowerCase().includes(se.toLowerCase())||String(b.tipo_contacto||"").toLowerCase().includes(se.toLowerCase())):fiBase;
   const ppj=fm.lt==="proyecto"?prjs.find(p=>p.id_proyecto===fm.pi):null;const ppc=fm.lt==="cliente"?cls.find(c=>c.id_cliente===fm.ci):null;
   return<div className="space-y-5"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><h1 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">Bitácora CRM</h1><p className="text-sm text-slate-500">{crm.length} interacciones</p></div><div className="flex items-center gap-2"><RefBtn onClick={onRefresh} loading={refreshing}/><button onClick={()=>sSf(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-sm font-semibold"><Plus size={16}/>Nueva</button></div></div>
     <div className="flex flex-col sm:flex-row gap-3"><div className="flex gap-1.5">{["Todos","Proyectos","Clientes"].map(f=><button key={f} onClick={()=>sFt(f)} className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${ft===f?"bg-[#c4a265]/10 text-[#c4a265] border border-[#c4a265]/20":"bg-white dark:bg-slate-800/40 text-slate-500 border border-slate-200 dark:border-slate-700/30"}`}>{f==="Proyectos"&&<FolderKanban size={12}/>}{f==="Clientes"&&<User size={12}/>}{f}</button>)}</div><div className="flex-1 flex items-center gap-2 bg-white dark:bg-slate-800/60 rounded-xl px-3 py-2.5 border border-slate-200 dark:border-slate-700/30"><Search size={14} className="text-slate-400 shrink-0"/><input value={se} onChange={e=>sSe(e.target.value)} className="bg-transparent text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 outline-none w-full" placeholder="Buscar en notas o tipo..."/>{se&&<button onClick={()=>sSe("")} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>}</div></div>
@@ -620,16 +620,18 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
     daysSinceCreation(task) > 5;
 
   const safeTasks = Array.isArray(tasks)
-    ? tasks.map((t) => {
-        const tipo = getTaskType(t);
-        return {
-          ...t,
-          tipo_tarea: tipo,
-          tipos_tarea: t.tipos_tarea || tipo,
-          estado: normalizeEstado(t.estado),
-          status: normalizeStatus(t.status),
-        };
-      })
+    ? tasks
+        .filter((t) => String(t.status || "").trim().toLowerCase() !== "eliminado")
+        .map((t) => {
+          const tipo = getTaskType(t);
+          return {
+            ...t,
+            tipo_tarea: tipo,
+            tipos_tarea: t.tipos_tarea || tipo,
+            estado: normalizeEstado(t.estado),
+            status: normalizeStatus(t.status),
+          };
+        })
     : [];
 
   const filterOptions = [
@@ -1371,11 +1373,12 @@ function App(){
       try {
         const data = await googleSheetsService.loadAll();
         if (data) {
-          sCls((data.clientes || []).filter(c=>c.status!=="eliminado"));
-          sPrjs((data.proyectos || []).filter(p=>p.status!=="eliminado"));
+          const notDel=x=>String(x.status||"").trim().toLowerCase()!=="eliminado";
+          sCls((data.clientes || []).filter(notDel));
+          sPrjs((data.proyectos || []).filter(notDel));
           sFacs(data.cuentas || []);
-          sCrm((data.crm || []).filter(b=>b.status!=="eliminado"));
-          sTasks((data.tareas || []).filter(t=>t.status!=="eliminado"));
+          sCrm((data.crm || []).filter(notDel));
+          sTasks((data.tareas || []).filter(notDel));
         }
       } catch (error) {
         console.error("Fallo la carga inicial", error);
@@ -1387,7 +1390,7 @@ function App(){
   }, [role]);
 
   const toast=(m,y="success")=>{const id=Date.now();sTs(p=>[...p,{id,m,y}]);setTimeout(()=>sTs(p=>p.filter(t=>t.id!==id)),y==="error"?7000:4000);};
-  const refreshData=async()=>{if(refreshing)return;setRefreshing(true);try{const data=await googleSheetsService.loadAll();if(data){sCls((data.clientes||[]).filter(c=>c.status!=="eliminado"));sPrjs((data.proyectos||[]).filter(p=>p.status!=="eliminado"));sFacs(data.cuentas||[]);sCrm((data.crm||[]).filter(b=>b.status!=="eliminado"));sTasks((data.tareas||[]).filter(t=>t.status!=="eliminado"));}toast("Datos actualizados");}catch(error){console.error("Error al refrescar:",error);toast("No se pudieron actualizar los datos","error");}finally{setRefreshing(false);}};
+  const refreshData=async()=>{if(refreshing)return;setRefreshing(true);try{const data=await googleSheetsService.loadAll();if(data){const notDel=x=>String(x.status||"").trim().toLowerCase()!=="eliminado";sCls((data.clientes||[]).filter(notDel));sPrjs((data.proyectos||[]).filter(notDel));sFacs(data.cuentas||[]);sCrm((data.crm||[]).filter(notDel));sTasks((data.tareas||[]).filter(notDel));}toast("Datos actualizados");}catch(error){console.error("Error al refrescar:",error);toast("No se pudieron actualizar los datos","error");}finally{setRefreshing(false);}};
   const vw={mobile:"max-w-[430px]",tablet:"max-w-[820px]",desktop:"max-w-none"}[vm];
   const notifs=useMemo(()=>{
     const today=new Date();today.setHours(0,0,0,0);
