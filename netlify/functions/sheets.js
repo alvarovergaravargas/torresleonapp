@@ -9,7 +9,8 @@ const ALLOWED_SHEETS = [
   'Empleados',
   'Estado HR',
   'Agenda_Trabajo',
-  'Tareas'
+  'Tareas',
+  'contacto_cliente'
 ];
 
 const SHEET_CONFIG = {
@@ -18,6 +19,7 @@ const SHEET_CONFIG = {
   CRM: { idField: 'id_interaccion' },
   Tareas: { idField: 'id_tarea' },
   Cuentas_por_cobrar: { idField: 'id_factura' },
+  contacto_cliente: { idField: 'id_contacto' },
 };
 
 const toSheetValue = (value) => {
