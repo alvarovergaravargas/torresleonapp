@@ -25,21 +25,18 @@ const googleSheetsService = {
       fetchSheet('Clientes'),
       fetchSheet('Proyectos'),
       fetchSheet('Cuentas_por_cobrar'),
-      fetchSheet('Pagos'),
       fetchSheet('CRM'),
-      fetchSheet('Empleados'),
-      fetchSheet('Estado HR'),
       fetchSheet('Tareas'),
       fetchSheet('contacto_cliente'),
     ]);
 
-    const [clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, tareas, contacts] = results.map((result, index) => {
+    const [clientes, proyectos, cuentas, crm, tareas, contacts] = results.map((result, index) => {
       if (result.status === 'fulfilled') return result.value;
       console.error(`Error cargando hoja índice ${index}:`, result.reason);
       return [];
     });
 
-    return { clientes, proyectos, cuentas, pagos, crm, empleados, estadoHR, tareas, contacts };
+    return { clientes, proyectos, cuentas, crm, tareas, contacts };
   },
 
   createRegistro: (sheetName, data) => fetchSheet(sheetName, 'POST', data),
