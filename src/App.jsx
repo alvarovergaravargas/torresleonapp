@@ -624,7 +624,7 @@ const fireTaskWebhook = async (task, prjs = []) => {
   }
 };
 
-function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing }) {
+function TarV({ tasks = [], setTasks, prjs = [], cls = [], toast, onRefresh, refreshing }) {
   const TASK_LABELS = [
     {
       value: "Crítico / dinero en riesgo",
@@ -797,7 +797,9 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
   const em = {
     tipo_tarea: DEFAULT_TASK_LABEL,
     tipos_tarea: DEFAULT_TASK_LABEL,
+    lt: "ninguno",
     obra: "",
+    id_cliente: "",
     responsable: "",
     cargo_rol: "",
     descripcion_tarea: "",
@@ -815,8 +817,9 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
       if (k === "tipo_tarea" || k === "tipos_tarea") {
         next.tipo_tarea = v;
         next.tipos_tarea = v;
-        if (!requiresProject(v)) next.obra = "";
+        if (requiresProject(v)) { next.lt = "proyecto"; }
       }
+      if (k === "lt") { next.obra = ""; next.id_cliente = ""; }
       return next;
     });
 
@@ -826,8 +829,9 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
       if (k === "tipo_tarea" || k === "tipos_tarea") {
         next.tipo_tarea = v;
         next.tipos_tarea = v;
-        if (!requiresProject(v)) next.obra = "";
+        if (requiresProject(v)) { next.lt = "proyecto"; }
       }
+      if (k === "lt") { next.obra = ""; next.id_cliente = ""; }
       return next;
     });
 
@@ -838,10 +842,13 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
 
   const openEdit = (task) => {
     const tipo = getTaskType(task);
+    const lt = task.obra ? "proyecto" : (task.id_cliente ? "cliente" : "ninguno");
     sEf({
       ...task,
       tipo_tarea: tipo,
       tipos_tarea: task.tipos_tarea || tipo,
+      lt,
+      id_cliente: task.id_cliente || "",
       status: normalizeStatus(task.status || "activo"),
       estado: normalizeEstado(task.estado || "Pendiente"),
     });
@@ -853,7 +860,7 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
       return;
     }
 
-    if (requiresProject(fm.tipo_tarea) && !fm.obra) {
+    if (requiresProject(fm.tipo_tarea) && fm.lt === "proyecto" && !fm.obra) {
       toast("Selecciona un proyecto para este tipo de tarea", "error");
       return;
     }
@@ -867,7 +874,8 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
         fecha_creacion: now,
         tipo_tarea: selectedType,
         tipos_tarea: selectedType,
-        obra: requiresProject(selectedType) ? fm.obra : "",
+        obra: fm.lt === "proyecto" ? fm.obra : "",
+        id_cliente: fm.lt === "cliente" ? fm.id_cliente : "",
         responsable: fm.responsable,
         cargo_rol: fm.cargo_rol,
         descripcion_tarea: fm.descripcion_tarea,
@@ -903,7 +911,7 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
 
     const selectedType = ef.tipo_tarea || ef.tipos_tarea || DEFAULT_TASK_LABEL;
 
-    if (requiresProject(selectedType) && !ef.obra) {
+    if (requiresProject(selectedType) && ef.lt === "proyecto" && !ef.obra) {
       toast("Selecciona un proyecto para este tipo de tarea", "error");
       return;
     }
@@ -917,7 +925,8 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
         ...ef,
         tipo_tarea: selectedType,
         tipos_tarea: ef.tipos_tarea || selectedType,
-        obra: requiresProject(selectedType) ? ef.obra : "",
+        obra: ef.lt === "proyecto" ? ef.obra : "",
+        id_cliente: ef.lt === "cliente" ? ef.id_cliente : "",
         estado: normalizeEstado(ef.estado),
         status: normalizeStatus(ef.status || "activo"),
         updated_at: now,
@@ -1256,9 +1265,8 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
                       </div>
 
                       <div className="mt-2 text-[11px] text-slate-500 space-y-0.5">
-                        {requiresProject(taskType) && (
-                          <div className="truncate">Proyecto: {projectLabel(t.obra)}</div>
-                        )}
+                        {t.obra && <div className="truncate flex items-center gap-1"><FolderKanban size={10} className="shrink-0"/>Proyecto: {projectLabel(t.obra)}</div>}
+                        {t.id_cliente && <div className="truncate flex items-center gap-1"><User size={10} className="shrink-0"/>Cliente: {cls.find(c=>c.id_cliente===t.id_cliente)?.razon_social_nombre||t.id_cliente}</div>}
                         <div>Responsable: {t.responsable || "Sin asignar"}</div>
                         <div className={isOverdue ? "text-red-500 font-semibold" : ""}>
                           Compromiso: {fd(t.fecha_compromiso)}
@@ -1384,16 +1392,29 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
           <TaskLabelSelector value={fm.tipo_tarea} onChange={(v) => u("tipo_tarea", v)} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {requiresProject(fm.tipo_tarea) && (
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-500 mb-2">Vincular a</label>
+              <div className="flex gap-2">
+                <button type="button" disabled={requiresProject(fm.tipo_tarea)} onClick={()=>u("lt","ninguno")} className={`flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-semibold transition-all ${fm.lt==="ninguno"?"bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-600":"bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700/30 hover:border-slate-300"} ${requiresProject(fm.tipo_tarea)?"opacity-40 cursor-not-allowed":""}`}>Sin vínculo</button>
+                <button type="button" onClick={()=>u("lt","proyecto")} className={`flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-semibold transition-all ${fm.lt==="proyecto"?"bg-[#C8A580]/10 text-[#C8A580] border-[#C8A580]/30":"bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700/30 hover:border-slate-300"}`}><FolderKanban size={13}/>Proyecto</button>
+                <button type="button" disabled={requiresProject(fm.tipo_tarea)} onClick={()=>u("lt","cliente")} className={`flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-semibold transition-all ${fm.lt==="cliente"?"bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/30":"bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700/30 hover:border-slate-300"} ${requiresProject(fm.tipo_tarea)?"opacity-40 cursor-not-allowed":""}`}><User size={13}/>Cliente</button>
+              </div>
+            </div>
+            {fm.lt==="proyecto" && (
               <SearchSelect
                 l="Proyecto"
                 v={fm.obra}
                 ch={(v) => u("obra", v)}
-                opts={[
-                  { v: "", l: "— Seleccionar proyecto —" },
-                  ...prjs.map((p) => ({ v: p.id_proyecto, l: `${p.nombre_proyecto}` })),
-                ]}
-                req
+                opts={[{v:"",l:"— Seleccionar proyecto —"},...prjs.map((p)=>({v:p.id_proyecto,l:p.nombre_proyecto}))]}
+                req={requiresProject(fm.tipo_tarea)}
+              />
+            )}
+            {fm.lt==="cliente" && (
+              <SearchSelect
+                l="Cliente"
+                v={fm.id_cliente}
+                ch={(v) => u("id_cliente", v)}
+                opts={[{v:"",l:"— Seleccionar cliente —"},...cls.map((c)=>({v:c.id_cliente,l:c.razon_social_nombre}))]}
               />
             )}
             <Inp l="Responsable" v={fm.responsable} ch={(v) => u("responsable", v)} opts={[{v:"",l:"— Sin asignar —"},...RESPONSABLES.map(r=>({v:r.nombre,l:r.nombre}))]} req/>
@@ -1433,16 +1454,29 @@ function TarV({ tasks = [], setTasks, prjs = [], toast, onRefresh, refreshing })
               <TaskLabelSelector value={ef.tipo_tarea || ef.tipos_tarea || DEFAULT_TASK_LABEL} onChange={(v) => ue("tipo_tarea", v)} />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {requiresProject(ef.tipo_tarea || ef.tipos_tarea) && (
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">Vincular a</label>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={requiresProject(ef.tipo_tarea||ef.tipos_tarea)} onClick={()=>ue("lt","ninguno")} className={`flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-semibold transition-all ${ef.lt==="ninguno"?"bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-600":"bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700/30 hover:border-slate-300"} ${requiresProject(ef.tipo_tarea||ef.tipos_tarea)?"opacity-40 cursor-not-allowed":""}`}>Sin vínculo</button>
+                    <button type="button" onClick={()=>ue("lt","proyecto")} className={`flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-semibold transition-all ${ef.lt==="proyecto"?"bg-[#C8A580]/10 text-[#C8A580] border-[#C8A580]/30":"bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700/30 hover:border-slate-300"}`}><FolderKanban size={13}/>Proyecto</button>
+                    <button type="button" disabled={requiresProject(ef.tipo_tarea||ef.tipos_tarea)} onClick={()=>ue("lt","cliente")} className={`flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border text-xs font-semibold transition-all ${ef.lt==="cliente"?"bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/30":"bg-slate-50 dark:bg-slate-800/40 text-slate-400 border-slate-200 dark:border-slate-700/30 hover:border-slate-300"} ${requiresProject(ef.tipo_tarea||ef.tipos_tarea)?"opacity-40 cursor-not-allowed":""}`}><User size={13}/>Cliente</button>
+                  </div>
+                </div>
+                {ef.lt==="proyecto" && (
                   <SearchSelect
                     l="Proyecto"
                     v={ef.obra || ""}
                     ch={(v) => ue("obra", v)}
-                    opts={[
-                      { v: "", l: "— Seleccionar proyecto —" },
-                      ...prjs.map((p) => ({ v: p.id_proyecto, l: `${p.nombre_proyecto}` })),
-                    ]}
-                    req
+                    opts={[{v:"",l:"— Seleccionar proyecto —"},...prjs.map((p)=>({v:p.id_proyecto,l:p.nombre_proyecto}))]}
+                    req={requiresProject(ef.tipo_tarea||ef.tipos_tarea)}
+                  />
+                )}
+                {ef.lt==="cliente" && (
+                  <SearchSelect
+                    l="Cliente"
+                    v={ef.id_cliente || ""}
+                    ch={(v) => ue("id_cliente", v)}
+                    opts={[{v:"",l:"— Seleccionar cliente —"},...cls.map((c)=>({v:c.id_cliente,l:c.razon_social_nombre}))]}
                   />
                 )}
                 <Inp l="Responsable" v={ef.responsable || ""} ch={(v) => ue("responsable", v)} opts={[{v:"",l:"— Sin asignar —"},...RESPONSABLES.map(r=>({v:r.nombre,l:r.nombre}))]} req/>
@@ -1536,7 +1570,7 @@ function App(){
     return list.sort((a,b)=>a.tipo==="critico"&&b.tipo!=="critico"?-1:1);
   },[tasks,facs,crm,cls,prjs]);
 
-  const rv=()=>{const rp={onRefresh:refreshData,refreshing};switch(view){case"dash-crm":return<DashCRM cls={cls} crm={crm} prjs={prjs} {...rp}/>;case"dash-cobros":return<DashCob cls={cls} prjs={prjs} facs={facs} {...rp}/>;case"clientes":return<ClV cls={cls} setCls={sCls} toast={toast} crm={crm} setCrm={sCrm} prjs={prjs} setView={sV} setSelC={sSelC} facs={facs} contacts={contacts} {...rp}/>;case"c360":return<C3V cid={selC} setView={sV} cls={cls} setCls={sCls} crm={crm} setCrm={sCrm} prjs={prjs} toast={toast} facs={facs}/>;case"proyectos":return<PrV cls={cls} setCls={sCls} setView={sV} setSP={sSP} prjs={prjs} setPrjs={sPrjs} toast={toast} facs={facs} {...rp}/>;case"p360":return<P3V pid={sp} setView={sV} cls={cls} crm={crm} setCrm={sCrm} toast={toast} prjs={prjs} setPrjs={sPrjs} facs={facs}/>;case"cobros":return<CoV cls={cls} prjs={prjs} facs={facs} setFacs={sFacs} toast={toast} {...rp}/>;case"tareas":return<TarV tasks={tasks} setTasks={sTasks} prjs={prjs} toast={toast} {...rp}/>;case"crm":return<BiV crm={crm} setCrm={sCrm} cls={cls} toast={toast} prjs={prjs} {...rp}/>;case"prj-cli":return<DashPrjCli cls={cls} prjs={prjs} facs={facs} setSP={sSP} setView={sV} {...rp}/>;default:return<DashCRM cls={cls} crm={crm} prjs={prjs} {...rp}/>;}};
+  const rv=()=>{const rp={onRefresh:refreshData,refreshing};switch(view){case"dash-crm":return<DashCRM cls={cls} crm={crm} prjs={prjs} {...rp}/>;case"dash-cobros":return<DashCob cls={cls} prjs={prjs} facs={facs} {...rp}/>;case"clientes":return<ClV cls={cls} setCls={sCls} toast={toast} crm={crm} setCrm={sCrm} prjs={prjs} setView={sV} setSelC={sSelC} facs={facs} contacts={contacts} {...rp}/>;case"c360":return<C3V cid={selC} setView={sV} cls={cls} setCls={sCls} crm={crm} setCrm={sCrm} prjs={prjs} toast={toast} facs={facs}/>;case"proyectos":return<PrV cls={cls} setCls={sCls} setView={sV} setSP={sSP} prjs={prjs} setPrjs={sPrjs} toast={toast} facs={facs} {...rp}/>;case"p360":return<P3V pid={sp} setView={sV} cls={cls} crm={crm} setCrm={sCrm} toast={toast} prjs={prjs} setPrjs={sPrjs} facs={facs}/>;case"cobros":return<CoV cls={cls} prjs={prjs} facs={facs} setFacs={sFacs} toast={toast} {...rp}/>;case"tareas":return<TarV tasks={tasks} setTasks={sTasks} prjs={prjs} cls={cls} toast={toast} {...rp}/>;case"crm":return<BiV crm={crm} setCrm={sCrm} cls={cls} toast={toast} prjs={prjs} {...rp}/>;case"prj-cli":return<DashPrjCli cls={cls} prjs={prjs} facs={facs} setSP={sSP} setView={sV} {...rp}/>;default:return<DashCRM cls={cls} crm={crm} prjs={prjs} {...rp}/>;}};
 
   if(!role)return<div><style>{CSS}</style><RoleSel setRole={sR}/></div>;
 
