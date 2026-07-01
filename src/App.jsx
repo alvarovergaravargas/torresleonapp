@@ -457,10 +457,11 @@ function P3V({pid,setView,cls,crm,setCrm,toast,prjs,setPrjs,facs}){const[t,sT]=u
     <Mod open={!!ep} close={()=>sEp(null)} title="Editar Proyecto" w>{ep&&<><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div className="sm:col-span-2"><Inp l="Nombre del Proyecto" v={ep.nombre_proyecto} ch={v=>uep("nombre_proyecto",v)} req/></div><Inp l="Tipo de Proyecto" v={ep.tipos_proyecto||""} ch={v=>uep("tipos_proyecto",v)} opts={PROJECT_TYPES}/><Inp l="Estado" v={ep.estado_obra||""} ch={v=>uep("estado_obra",v)} opts={["Cotizando","Ejecución","En Planificación","Suspendido","Entregado"]}/><Inp l="Project Manager" v={ep.project_manager||""} ch={v=>uep("project_manager",v)} opts={["","...seleccionar",...TEAM]}/><Inp l="Presupuesto Aprobado" v={ep.presupuesto_aprobado||""} ch={v=>uep("presupuesto_aprobado",v)} type="number"/><Inp l="Fecha Inicio" v={ep.fecha_inicio||""} ch={v=>uep("fecha_inicio",v)} type="date"/></div><div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200 dark:border-slate-700/30"><button onClick={()=>sEp(null)} className="px-4 py-2.5 rounded-xl text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Cancelar</button><button onClick={saveEditP} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0D4D5E] hover:bg-[#093B48] text-white text-sm font-semibold"><Save size={15}/>Guardar Cambios</button></div></>}</Mod>
   </div>;}
 
-function CoV({cls,prjs,facs,setFacs,toast,onRefresh,refreshing}){const[fl,sFl]=useState("Todas");const[ef,sEf]=useState(null);const[nf,sNf]=useState(false);const[imp,sImp]=useState(false);const[impData,sImpData]=useState(null);const[impErr,sImpErr]=useState([]);const[impOk,sImpOk]=useState(false);const[impSaving,sImpSaving]=useState(false);const fileRef=useRef(null);
+function CoV({cls,prjs,facs,setFacs,toast,onRefresh,refreshing}){const[fl,sFl]=useState("Todas");const[se,sSe]=useState("");const[ef,sEf]=useState(null);const[nf,sNf]=useState(false);const[imp,sImp]=useState(false);const[impData,sImpData]=useState(null);const[impErr,sImpErr]=useState([]);const[impOk,sImpOk]=useState(false);const[impSaving,sImpSaving]=useState(false);const fileRef=useRef(null);
   const emF={id_proyecto:"",hitos_concepto:"",monto_facturado:"",fecha_vencimiento:new Date().toISOString().slice(0,10),estado_cobro:"Pendiente"};const[nfm,sNfm]=useState(emF);const un=(k,v)=>sNfm(p=>({...p,[k]:v}));
   const saveNF=async()=>{if(!nfm.id_proyecto||!nfm.hitos_concepto||!nfm.monto_facturado){toast("Proyecto, concepto y monto son requeridos","error");return;}try{const newId=nextId("FAC",facs,"id_factura");const mora=Math.max(0,Math.floor((new Date()-new Date(nfm.fecha_vencimiento+"T12:00:00"))/86400000));const nueva={id_factura:newId,...nfm,monto_facturado:parseMoney(nfm.monto_facturado),dias_mora:nfm.estado_cobro==="Pagado"?0:mora};await googleSheetsService.createRegistro("Cuentas_por_cobrar",nueva);setFacs(p=>[...p,nueva]);toast("Factura creada");sNfm(emF);sNf(false);}catch(error){console.error("Error creando factura:",error);toast("No se pudo crear la factura","error");}};
-  const d=fl==="Todas"?facs:fl==="Disputa"?facs.filter(f=>f.estado_cobro==="En Disputa Técnica"):facs.filter(f=>f.estado_cobro===fl);
+  const baseD=fl==="Todas"?facs:fl==="Disputa"?facs.filter(f=>f.estado_cobro==="En Disputa Técnica"):facs.filter(f=>f.estado_cobro===fl);
+  const d=se.trim()?baseD.filter(f=>{const pr=prjs.find(p=>p.id_proyecto===f.id_proyecto);const cl=pr?cls.find(c=>c.id_cliente===pr.id_cliente):null;const q=se.toLowerCase();return String(f.id_factura||"").toLowerCase().includes(q)||String(f.hitos_concepto||"").toLowerCase().includes(q)||(pr?.nombre_proyecto||"").toLowerCase().includes(q)||(cl?.razon_social_nombre||"").toLowerCase().includes(q);}):baseD;
   // Edit factura
   const ue=(k,v)=>sEf(p=>({...p,[k]:v}));
   const saveF=async()=>{if(!ef)return;const updated={...ef,monto_facturado:parseMoney(ef.monto_facturado),dias_mora:Number(ef.dias_mora||0)};try{await googleSheetsService.updateRegistro("Cuentas_por_cobrar",ef.id_factura,updated);setFacs(p=>p.map(f=>f.id_factura===ef.id_factura?updated:f));toast("Factura actualizada");sEf(null);}catch(error){console.error("Error actualizando factura:",error);toast("No se pudo actualizar la factura","error");}};
@@ -504,7 +505,7 @@ function CoV({cls,prjs,facs,setFacs,toast,onRefresh,refreshing}){const[fl,sFl]=u
   const confirmImport=async()=>{if(!impData)return;sImpSaving(true);try{const existingIds=new Set(facs.map(f=>f.id_factura));const results=await Promise.allSettled(impData.map(f=>existingIds.has(f.id_factura)?googleSheetsService.updateRegistro("Cuentas_por_cobrar",f.id_factura,f):googleSheetsService.createRegistro("Cuentas_por_cobrar",f)));const failed=results.filter(r=>r.status==="rejected").length;setFacs(p=>{const ids=new Set(impData.map(f=>f.id_factura));const kept=p.filter(f=>!ids.has(f.id_factura));return[...kept,...impData];});if(failed>0)toast(`${impData.length-failed} guardadas, ${failed} con error`,"error");else toast(`${impData.length} facturas guardadas en Sheets`);sImpData(null);sImpOk(false);sImpErr([]);sImp(false);}catch(error){console.error("Error importando:",error);toast("Error al importar","error");}finally{sImpSaving(false);};};
 
   return<div className="space-y-5"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><h1 className="text-xl lg:text-2xl font-bold text-slate-900 dark:text-white">Cartera</h1><p className="text-sm text-slate-500">{facs.length} facturas</p></div><div className="flex gap-2 flex-wrap"><RefBtn onClick={onRefresh} loading={refreshing}/><button onClick={()=>{sNf(true);sNfm(emF);}} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C8A580]/10 text-[#C8A580] border border-[#C8A580]/20 text-sm font-semibold"><Plus size={16}/>Nueva Factura</button><button onClick={()=>{sImp(true);sImpErr([]);sImpData(null);sImpOk(false);}} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 text-slate-500 border border-slate-200 dark:border-slate-700/30 text-sm font-semibold"><Upload size={16}/>Importar CSV</button></div></div>
-    <div className="flex gap-1.5 flex-wrap">{["Todas","Pendiente","Pagado","Pago Parcial","Disputa"].map(f=><button key={f} onClick={()=>sFl(f)} className={`px-3 py-2 rounded-xl text-xs font-semibold ${fl===f?"bg-[#C8A580]/10 text-[#C8A580] border border-[#C8A580]/20":"bg-white dark:bg-slate-800/40 text-slate-500 border border-slate-200 dark:border-slate-700/30"}`}>{f}</button>)}</div>
+    <div className="flex flex-col sm:flex-row gap-3"><div className="flex gap-1.5 flex-wrap">{["Todas","Pendiente","Pagado","Pago Parcial","Disputa"].map(f=><button key={f} onClick={()=>sFl(f)} className={`px-3 py-2 rounded-xl text-xs font-semibold ${fl===f?"bg-[#C8A580]/10 text-[#C8A580] border border-[#C8A580]/20":"bg-white dark:bg-slate-800/40 text-slate-500 border border-slate-200 dark:border-slate-700/30"}`}>{f}</button>)}</div><div className="flex-1 flex items-center gap-2 bg-white dark:bg-slate-800/60 rounded-xl px-3 py-2.5 border border-slate-200 dark:border-slate-700/30"><Search size={15} className="text-slate-400 shrink-0"/><input value={se} onChange={e=>sSe(e.target.value)} className="bg-transparent text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 outline-none w-full" placeholder="Buscar factura, concepto, proyecto, cliente..."/>{se&&<button onClick={()=>sSe("")} className="text-slate-400 hover:text-slate-600 shrink-0"><X size={14}/></button>}</div></div>
     <div className="lg:hidden space-y-2">{d.map(f=>{const pr=prjs.find(p=>p.id_proyecto===f.id_proyecto);const cl=pr?cls.find(c=>c.id_cliente===pr.id_cliente):null;return<div key={f.id_factura} className="cd p-4" onClick={()=>sEf({...f})}><div className="flex items-start justify-between mb-1"><div><span className="text-xs font-mono text-[#C8A580]">{f.id_factura}</span><div className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{$(f.monto_facturado)}</div></div><span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${bg(f.estado_cobro)}`}>{f.estado_cobro}</span></div><div className="text-xs text-slate-500 truncate">{f.hitos_concepto}</div>{cl&&<div className="text-[11px] text-slate-400">{cl.razon_social_nombre}</div>}{f.dias_mora>0&&<div className="text-[11px] text-red-500 font-semibold mt-1">{f.dias_mora}d mora</div>}</div>;})}</div>
     <div className="hidden lg:block cd overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-slate-200 dark:border-slate-700/30">{["Factura","Proyecto","Cliente","Concepto","Monto","Venc.","Estado","Mora",""].map(h=><th key={h} className="px-4 py-3 text-[10px] font-semibold uppercase text-slate-400">{h}</th>)}</tr></thead><tbody>{d.map(f=>{const pr=prjs.find(p=>p.id_proyecto===f.id_proyecto);const cl=pr?cls.find(c=>c.id_cliente===pr.id_cliente):null;return<tr key={f.id_factura} className="border-b border-slate-100 dark:border-slate-700/15 hover:bg-slate-50 dark:hover:bg-slate-800/40"><td className="px-4 py-3 text-xs font-mono text-[#C8A580]">{f.id_factura}</td><td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">{pr?.nombre_proyecto||"—"}</td><td className="px-4 py-3 text-xs text-slate-500">{cl?.razon_social_nombre||"—"}</td><td className="px-4 py-3 text-xs text-slate-500 max-w-[150px] truncate">{f.hitos_concepto}</td><td className="px-4 py-3 text-sm font-bold text-slate-900 dark:text-white">{$(f.monto_facturado)}</td><td className="px-4 py-3 text-xs text-slate-500">{fd(f.fecha_vencimiento)}</td><td className="px-4 py-3"><span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${bg(f.estado_cobro)}`}>{f.estado_cobro}</span></td><td className="px-4 py-3 text-xs font-bold">{f.dias_mora>0?<span className="text-red-500">{f.dias_mora}d</span>:"—"}</td><td className="px-4 py-2"><button onClick={()=>sEf({...f})} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-[#C8A580]"><Pencil size={13}/></button></td></tr>;})}</tbody></table></div></div>
     {/* NUEVA FACTURA MODAL */}
@@ -683,6 +684,7 @@ function TarV({ tasks = [], setTasks, prjs = [], cls = [], toast, onRefresh, ref
   const [sortOrder, sSortOrder] = useState("newest");
   const [showDone, setShowDone] = useState(false);
   const [pendingDel, sPendingDel] = useState(null);
+  const [se, sSe] = useState("");
 
   const normalizeEstado = (estado) => {
     const e = String(estado || "").trim().toLowerCase();
@@ -792,10 +794,25 @@ function TarV({ tasks = [], setTasks, prjs = [], cls = [], toast, onRefresh, ref
       return sortOrder === "oldest" ? aTime - bTime : bTime - aTime;
     });
 
-  const filteredTasks =
+  const typeFiltered =
     typeFilter === "Todos"
       ? safeTasks
       : safeTasks.filter((t) => getTaskType(t) === typeFilter);
+
+  const filteredTasks = se.trim()
+    ? typeFiltered.filter((t) => {
+        const q = se.toLowerCase();
+        const projName = projectLabel(t.obra);
+        const clientName = t.id_cliente ? (cls.find((c) => c.id_cliente === t.id_cliente)?.razon_social_nombre || "") : "";
+        return (
+          String(t.descripcion_tarea || "").toLowerCase().includes(q) ||
+          String(t.responsable || "").toLowerCase().includes(q) ||
+          projName.toLowerCase().includes(q) ||
+          clientName.toLowerCase().includes(q) ||
+          String(t.comentarios || "").toLowerCase().includes(q)
+        );
+      })
+    : typeFiltered;
 
   const visibleTasks = sortTasksByCreation(filteredTasks);
 
@@ -1132,6 +1149,8 @@ function TarV({ tasks = [], setTasks, prjs = [], cls = [], toast, onRefresh, ref
           </button>
         </div>
       </div>
+
+      <div className="flex items-center gap-2 bg-white dark:bg-slate-800/60 rounded-xl px-3 py-2.5 border border-slate-200 dark:border-slate-700/30"><Search size={15} className="text-slate-400 shrink-0"/><input value={se} onChange={e=>sSe(e.target.value)} className="bg-transparent text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 outline-none w-full" placeholder="Buscar tarea, responsable, proyecto..."/>{se&&<button onClick={()=>sSe("")} className="text-slate-400 hover:text-slate-600 shrink-0"><X size={14}/></button>}</div>
 
       <div className="cd p-4">
         <div className="flex flex-col xl:flex-row xl:items-start gap-4 xl:gap-6">
