@@ -97,7 +97,7 @@ exports.handler = async (event) => {
       const body = JSON.parse(event.body || '{}');
       const rowData = headersRow.map((header) => toSheetValue(body[header]));
 
-      await sheets.spreadsheets.values.append({
+      const appendResult = await sheets.spreadsheets.values.append({
         spreadsheetId,
         range: `${sheetName}!A:A`,
         valueInputOption: 'USER_ENTERED',
@@ -105,10 +105,13 @@ exports.handler = async (event) => {
         requestBody: { values: [rowData] },
       });
 
+      const updatedRange = appendResult.data?.updates?.updatedRange;
+      console.log(`POST ${sheetName}: fila escrita en ${updatedRange}`);
+
       return {
         statusCode: 201,
         headers,
-        body: JSON.stringify({ message: 'Registro creado' })
+        body: JSON.stringify({ message: 'Registro creado', updatedRange })
       };
     }
 
